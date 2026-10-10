@@ -12,7 +12,7 @@ export default function SponsorOverlay({ isPreview = false }: { isPreview?: bool
   return (
     <div 
       className="absolute top-0 right-0 z-50 pointer-events-none"
-      style={{ transform: `translate(${state.sponsorOffsetX}px, ${state.sponsorOffsetY}px)` }}
+      style={{ transform: `translate(${state.sponsorOffsetX}px, ${state.sponsorOffsetY}px) scale(${state.sponsorScale})`, transformOrigin: 'top right' }}
     >
       <div className="w-[300px] h-[300px] origin-top-right animate-fade-in flex items-center justify-center relative overflow-visible">
         <img 

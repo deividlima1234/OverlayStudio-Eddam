@@ -11,7 +11,7 @@ export default function PopupOverlay({ isPreview = false }: { isPreview?: boolea
   return (
     <div 
       className="absolute top-1/2 right-0 -translate-y-1/2 z-40 pointer-events-none"
-      style={{ transform: `translate(calc(0px + ${state.popupOffsetX}px), calc(-50% + ${state.popupOffsetY}px))` }}
+      style={{ transform: `translate(calc(0px + ${state.popupOffsetX}px), calc(-50% + ${state.popupOffsetY}px)) scale(${state.popupScale})`, transformOrigin: 'right center' }}
     >
       <div className="bg-[#0f0f11]/90 backdrop-blur-xl border border-blue-500/40 rounded-l-2xl shadow-[-10px_0_30px_rgba(0,0,0,0.5)] flex items-center p-4 gap-4 animate-slide-left border-r-0">
         

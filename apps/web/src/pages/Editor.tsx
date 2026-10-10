@@ -136,19 +136,23 @@ export default function Editor() {
 
             adOffsetX: state.adOffsetX,
             adOffsetY: state.adOffsetY,
+            adScale: state.adScale,
             sponsorOffsetX: state.sponsorOffsetX,
             sponsorOffsetY: state.sponsorOffsetY,
+            sponsorScale: state.sponsorScale,
 
             tickerText: state.tickerText,
             isTickerVisible: state.isTickerVisible,
             tickerOffsetX: state.tickerOffsetX,
             tickerOffsetY: state.tickerOffsetY,
+            tickerScale: state.tickerScale,
 
             popupImage: state.popupImage,
             popupText: state.popupText,
             isPopupVisible: state.isPopupVisible,
             popupOffsetX: state.popupOffsetX,
             popupOffsetY: state.popupOffsetY,
+            popupScale: state.popupScale,
           }
         })
       });
@@ -289,6 +293,13 @@ export default function Editor() {
                         </div>
                         <input type="range" min="-1000" max="1000" value={state.sponsorOffsetY} onChange={(e) => updateField('sponsorOffsetY', Number(e.target.value))} className="w-full accent-blue-500" />
                       </div>
+                      <div className="flex flex-col gap-1">
+                        <div className="flex justify-between text-xs text-textMuted">
+                          <span>Tamaño (Escala)</span>
+                          <span className="font-mono bg-black/50 px-1 rounded">{Math.round(state.sponsorScale * 100)}%</span>
+                        </div>
+                        <input type="range" min="0.1" max="3" step="0.05" value={state.sponsorScale} onChange={(e) => updateField('sponsorScale', Number(e.target.value))} className="w-full accent-blue-500" />
+                      </div>
                     </div>
                   </div>
 
@@ -340,6 +351,13 @@ export default function Editor() {
                         </div>
                         <input type="range" min="-1000" max="1000" value={state.adOffsetY} onChange={(e) => updateField('adOffsetY', Number(e.target.value))} className="w-full accent-blue-500" />
                       </div>
+                      <div className="flex flex-col gap-1">
+                        <div className="flex justify-between text-xs text-textMuted">
+                          <span>Tamaño (Escala)</span>
+                          <span className="font-mono bg-black/50 px-1 rounded">{Math.round(state.adScale * 100)}%</span>
+                        </div>
+                        <input type="range" min="0.1" max="3" step="0.05" value={state.adScale} onChange={(e) => updateField('adScale', Number(e.target.value))} className="w-full accent-blue-500" />
+                      </div>
                     </div>
                   </div>
 
@@ -378,6 +396,13 @@ export default function Editor() {
                           <span className="font-mono bg-black/50 px-1 rounded">{state.tickerOffsetY}px</span>
                         </div>
                         <input type="range" min="-1000" max="1000" value={state.tickerOffsetY} onChange={(e) => updateField('tickerOffsetY', Number(e.target.value))} className="w-full accent-blue-500" />
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <div className="flex justify-between text-xs text-textMuted">
+                          <span>Tamaño (Escala)</span>
+                          <span className="font-mono bg-black/50 px-1 rounded">{Math.round(state.tickerScale * 100)}%</span>
+                        </div>
+                        <input type="range" min="0.1" max="3" step="0.05" value={state.tickerScale} onChange={(e) => updateField('tickerScale', Number(e.target.value))} className="w-full accent-blue-500" />
                       </div>
                     </div>
                   </div>
@@ -446,6 +471,13 @@ export default function Editor() {
                           <span className="font-mono bg-black/50 px-1 rounded">{state.popupOffsetY}px</span>
                         </div>
                         <input type="range" min="-1000" max="1000" value={state.popupOffsetY} onChange={(e) => updateField('popupOffsetY', Number(e.target.value))} className="w-full accent-blue-500" />
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <div className="flex justify-between text-xs text-textMuted">
+                          <span>Tamaño (Escala)</span>
+                          <span className="font-mono bg-black/50 px-1 rounded">{Math.round(state.popupScale * 100)}%</span>
+                        </div>
+                        <input type="range" min="0.1" max="3" step="0.05" value={state.popupScale} onChange={(e) => updateField('popupScale', Number(e.target.value))} className="w-full accent-blue-500" />
                       </div>
                     </div>
                   </div>

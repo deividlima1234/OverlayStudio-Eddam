@@ -11,7 +11,7 @@ export default function TickerOverlay({ isPreview = false }: { isPreview?: boole
   return (
     <div 
       className="absolute bottom-0 left-0 w-full z-40 pointer-events-none"
-      style={{ transform: `translate(${state.tickerOffsetX}px, ${state.tickerOffsetY}px)` }}
+      style={{ transform: `translate(${state.tickerOffsetX}px, ${state.tickerOffsetY}px) scale(${state.tickerScale})`, transformOrigin: 'bottom center' }}
     >
       <div className="w-full bg-[#0a0a0c]/95 border-t border-blue-500/30 shadow-[0_-5px_20px_rgba(0,0,0,0.5)] flex items-center overflow-hidden animate-slide-up" style={{ height: '50px' }}>
         

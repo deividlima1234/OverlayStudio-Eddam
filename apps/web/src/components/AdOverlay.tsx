@@ -16,7 +16,7 @@ export default function AdOverlay({ isPreview = false }: { isPreview?: boolean }
   return (
     <div 
       className="absolute bottom-0 left-0 z-50 pointer-events-none"
-      style={{ transform: `translate(${state.adOffsetX}px, ${state.adOffsetY}px)` }}
+      style={{ transform: `translate(${state.adOffsetX}px, ${state.adOffsetY}px) scale(${state.adScale})`, transformOrigin: 'bottom left' }}
     >
       <div className={`w-[1000px] h-[240px] origin-bottom-left ${state.adMode === 'loop' ? 'animate-ad-loop' : 'animate-slide-up'}`}>
         <div className="w-full h-full bg-[#0f0f11]/90 backdrop-blur-xl border border-blue-500/40 rounded-2xl shadow-[0_0_30px_rgba(59,130,246,0.3)] flex overflow-hidden">

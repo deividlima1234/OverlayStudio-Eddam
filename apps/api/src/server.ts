@@ -5,7 +5,10 @@ import { db } from './db/index.js';
 import { overlays } from './db/schema.js';
 import { eq } from 'drizzle-orm';
 
-const fastify = Fastify({ logger: true });
+const fastify = Fastify({ 
+  logger: true,
+  bodyLimit: 15 * 1024 * 1024 // 15MB para soportar imágenes grandes
+});
 
 // Registrar CORS
 fastify.register(cors, { origin: '*' });

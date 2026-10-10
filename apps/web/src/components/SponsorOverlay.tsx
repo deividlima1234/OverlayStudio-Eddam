@@ -3,14 +3,11 @@ import { useOverlayStore } from '../store/useOverlayStore';
 export default function SponsorOverlay({ isPreview = false }: { isPreview?: boolean }) {
   const state = useOverlayStore();
   
-  // The global 'isVisible' acts as a Master switch for EVERYTHING.
-  const isMasterVisible = isPreview || state.isVisible;
+  // En Preview siempre debe mostrarse. En Live depende del Master Switch y su propio Switch.
+  const visible = isPreview || (state.isVisible && state.isSponsorVisible);
   
-  // If no sponsor logo is set, don't render.
-  if (!state.sponsorLogo) return null;
-  
-  // Si está oculto o el master está apagado, no lo renderizamos.
-  if (!isMasterVisible || !state.isSponsorVisible) return null;
+  // Si no hay logo o no está visible, no renderizamos.
+  if (!state.sponsorLogo || !visible) return null;
 
   return (
     <div className="absolute top-12 right-12 z-50 pointer-events-none origin-top-right animate-fade-in">

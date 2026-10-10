@@ -32,7 +32,7 @@ export default function OverlayRender() {
   }, [state.timerIsRunning, state.timerElapsed, state.updateState]);
 
   return (
-    <div className="w-screen h-screen relative overflow-hidden font-sans">
+    <div className="w-[1920px] h-[1080px] relative overflow-hidden font-sans">
       {state.isGoalAnim && (
         <div className="absolute inset-0 flex items-center justify-center z-50 bg-black/40 backdrop-blur-sm animate-fade-in">
           <div className="relative text-center animate-slide-up">

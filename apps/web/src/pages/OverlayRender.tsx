@@ -4,6 +4,7 @@ import { useOverlayStore } from '../store/useOverlayStore';
 import Scoreboard from '../components/Scoreboard';
 import Lineup from '../components/Lineup';
 import ReplayOverlay from '../components/ReplayOverlay';
+import AdOverlay from '../components/AdOverlay';
 
 export default function OverlayRender() {
   const { id } = useParams<{ id: string }>();
@@ -64,9 +65,14 @@ export default function OverlayRender() {
         </div>
       )}
 
-      {id === 'liga-pro' ? <Lineup /> : <Scoreboard />}
-      
-      <ReplayOverlay />
+      {id?.startsWith('ad-') ? (
+        <AdOverlay />
+      ) : (
+        <>
+          {id === 'liga-pro' ? <Lineup /> : <Scoreboard />}
+          <ReplayOverlay />
+        </>
+      )}
       </div>
     </div>
   );

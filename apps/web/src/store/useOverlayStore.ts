@@ -21,6 +21,13 @@ interface OverlayState {
   homePlayers: { num: string; name: string }[];
   awayPlayers: { num: string; name: string }[];
   
+  // Publicidad
+  adTitle: string;
+  adSubtitle: string;
+  adText: string;
+  adPhone: string;
+  isAdVisible: boolean;
+  
   // Tiempo
   timerIsRunning: boolean;
   timerElapsed: number; // en segundos
@@ -68,6 +75,12 @@ export const useOverlayStore = create<OverlayState>((set, get) => ({
     { num: '6', name: 'MED. DEF' }, { num: '8', name: 'MED. DER' }, { num: '10', name: 'MED. IZQ' },
     { num: '7', name: 'EXT. DER' }, { num: '11', name: 'EXT. IZQ' }, { num: '9', name: 'DELANTERO' }
   ],
+  
+  adTitle: 'Servicio de Transmisión',
+  adSubtitle: 'Profesional',
+  adText: 'Contrata la mejor calidad para tu evento',
+  adPhone: '51983032706',
+  isAdVisible: true,
 
   timerIsRunning: false,
   timerElapsed: 0,

@@ -1,15 +1,45 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LayoutTemplate, PlusCircle, MonitorPlay, Settings, Copy, X, Check } from 'lucide-react';
 
 export default function Dashboard() {
   const navigate = useNavigate();
 
-  // Estado para los proyectos
-  const [projects, setProjects] = useState([
-    { id: 'torneo-regional', name: 'Torneo Regional 2026', overlays: 3 },
-    { id: 'liga-pro', name: 'Liga Pro eSports', overlays: 5 },
-  ]);
+  // Estado para los proyectos desde la DB
+  const [projects, setProjects] = useState<any[]>([]);
+
+  useEffect(() => {
+    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+    fetch(`${API_URL}/api/overlays`)
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.length > 0) {
+          // Mapeamos los datos de la DB para la UI
+          setProjects(data.map((p: any) => ({ ...p, overlays: p.type === 'publicidad' ? 1 : 3 })));
+        } else {
+          // Datos por defecto si la DB está vacía
+          setProjects([
+            { id: 'torneo-regional', name: 'Torneo Regional 2026', type: 'scoreboard', overlays: 3 },
+            { id: 'liga-pro', name: 'Liga Pro eSports', type: 'lineup', overlays: 5 },
+          ]);
+        }
+      })
+      .catch(e => console.error(e));
+  }, []);
+
+  const createNewProject = async () => {
+    const id = 'ad-' + Math.random().toString(36).substring(7);
+    const newProj = { name: 'Sponsors & Publicidad', type: 'publicidad', settings: {} };
+    
+    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+    await fetch(`${API_URL}/api/overlays/${id}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newProj)
+    });
+    
+    navigate(`/editor/${id}`);
+  };
 
   const [modalProject, setModalProject] = useState<any>(null);
   const [editName, setEditName] = useState('');
@@ -54,7 +84,7 @@ export default function Dashboard() {
             <p className="text-textMuted">Gestión de gráficos en tiempo real</p>
           </div>
         </div>
-        <button className="btn-primary flex items-center gap-2">
+        <button onClick={createNewProject} className="btn-primary flex items-center gap-2">
           <PlusCircle className="w-5 h-5" />
           Nuevo Proyecto
         </button>
@@ -88,9 +118,9 @@ export default function Dashboard() {
             </div>
           ))}
           
-          <div className="card border-dashed border-2 flex flex-col items-center justify-center text-textMuted hover:text-white hover:border-primary cursor-pointer transition-all min-h-[160px]">
+          <div onClick={createNewProject} className="card border-dashed border-2 flex flex-col items-center justify-center text-textMuted hover:text-white hover:border-primary cursor-pointer transition-all min-h-[160px]">
             <PlusCircle className="w-8 h-8 mb-2 opacity-50" />
-            <p className="font-medium">Crear un proyecto en blanco</p>
+            <p className="font-medium">Crear un proyecto de Publicidad</p>
           </div>
         </div>
       </main>

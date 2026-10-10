@@ -81,6 +81,16 @@ fastify.register(async function (fastify) {
     }
   });
 
+  // Obtener todos los Overlays
+  fastify.get('/api/overlays', async (req, reply) => {
+    try {
+      const result = await db.select().from(overlays);
+      return result;
+    } catch (error: any) {
+      reply.code(500).send({ error: error.message });
+    }
+  });
+
   // Obtener Overlay
   fastify.get('/api/overlays/:id', async (req, reply) => {
     const { id } = req.params as { id: string };

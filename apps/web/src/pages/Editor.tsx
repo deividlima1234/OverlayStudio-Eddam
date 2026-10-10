@@ -5,6 +5,7 @@ import { useOverlayStore } from '../store/useOverlayStore';
 import Scoreboard from '../components/Scoreboard';
 import Lineup from '../components/Lineup';
 import ReplayOverlay from '../components/ReplayOverlay';
+import AdOverlay from '../components/AdOverlay';
 
 export default function Editor() {
   const { id } = useParams<{ id: string }>();
@@ -440,8 +441,14 @@ export default function Editor() {
           >
             <span className="absolute top-4 left-4 text-[10px] font-bold px-2 py-1 rounded bg-yellow-500 text-black z-30 uppercase tracking-widest shadow-lg">Preview (Estudio)</span>
             <div className="w-[1920px] h-[1080px] origin-top-left relative" style={{ transform: `scale(${scale})` }}>
-                {id === 'liga-pro' ? <Lineup isPreview /> : <Scoreboard isPreview />}
-                <ReplayOverlay />
+                {id?.startsWith('ad-') ? (
+                  <AdOverlay isPreview />
+                ) : (
+                  <>
+                    {id === 'liga-pro' ? <Lineup isPreview /> : <Scoreboard isPreview />}
+                    <ReplayOverlay />
+                  </>
+                )}
             </div>
           </div>
 
@@ -452,8 +459,14 @@ export default function Editor() {
           >
             <span className="absolute top-4 left-4 text-[10px] font-bold px-2 py-1 rounded bg-red-600 text-white z-30 uppercase tracking-widest shadow-lg animate-pulse">Live (Programa)</span>
             <div className="w-[1920px] h-[1080px] origin-top-left relative" style={{ transform: `scale(${scale})` }}>
-                {id === 'liga-pro' ? <Lineup /> : <Scoreboard />}
-                <ReplayOverlay />
+                {id?.startsWith('ad-') ? (
+                  <AdOverlay />
+                ) : (
+                  <>
+                    {id === 'liga-pro' ? <Lineup /> : <Scoreboard />}
+                    <ReplayOverlay />
+                  </>
+                )}
             </div>
           </div>
           

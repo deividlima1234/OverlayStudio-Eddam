@@ -10,7 +10,7 @@ services:
     name: eddam-api
     env: node
     plan: free
-    buildCommand: npm install -g pnpm && pnpm install && pnpm --filter api run build
+    buildCommand: pnpm install && pnpm --filter api run build
     startCommand: cd apps/api && pnpm run start
     envVars:
       - key: DATABASE_URL
@@ -22,7 +22,7 @@ services:
   - type: web
     name: eddam-studio
     env: static
-    buildCommand: npm install -g pnpm && pnpm install && pnpm --filter web run build
+    buildCommand: pnpm install && pnpm --filter web run build
     staticPublishPath: apps/web/dist
     envVars:
       - key: VITE_API_URL

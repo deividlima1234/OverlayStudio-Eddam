@@ -1,0 +1,139 @@
+import { create } from 'zustand';
+
+interface OverlayState {
+  // Datos
+  homeName: string;
+  awayName: string;
+  homeScore: number;
+  awayScore: number;
+  homeColor: string;
+  awayColor: string;
+  homeTextColor: string;
+  awayTextColor: string;
+  homeLogo: string;
+  awayLogo: string;
+  
+  // Visibilidad global
+  isVisible: boolean;
+  
+  // Alineaciones
+  lineupTeamVisible: 'home' | 'away';
+  homePlayers: { num: string; name: string }[];
+  awayPlayers: { num: string; name: string }[];
+  
+  // Tiempo
+  timerIsRunning: boolean;
+  timerElapsed: number; // en segundos
+  
+  // Animaciones
+  isGoalAnim: boolean;
+  goalTeam: 'home' | 'away' | null;
+  
+  // WS
+  ws: WebSocket | null;
+  
+  // Acciones
+  updateState: (newState: Partial<OverlayState>) => void;
+  connectWebSocket: (role: 'studio' | 'renderer', overlayId?: string) => void;
+  loadOverlay: (overlayId?: string) => Promise<void>;
+  broadcast: (payload: any) => void;
+}
+
+export const useOverlayStore = create<OverlayState>((set, get) => ({
+  homeName: 'RMD',
+  awayName: 'FCB',
+  homeScore: 0,
+  awayScore: 0,
+  homeColor: '#ffffff',
+  awayColor: '#e11d48',
+  homeTextColor: '#000000',
+  awayTextColor: '#ffffff',
+  homeLogo: '',
+  awayLogo: '',
+  
+  isVisible: false,
+  
+  lineupTeamVisible: 'home',
+  homePlayers: [
+    { num: '1', name: 'PORTERO' },
+    { num: '2', name: 'LAT. DER' }, { num: '3', name: 'CEN. DER' }, { num: '4', name: 'CEN. IZQ' }, { num: '5', name: 'LAT. IZQ' },
+    { num: '6', name: 'MED. DEF' }, { num: '8', name: 'MED. DER' }, { num: '10', name: 'MED. IZQ' },
+    { num: '7', name: 'EXT. DER' }, { num: '11', name: 'EXT. IZQ' }, { num: '9', name: 'DELANTERO' }
+  ],
+  awayPlayers: [
+    { num: '1', name: 'PORTERO' },
+    { num: '2', name: 'LAT. DER' }, { num: '3', name: 'CEN. DER' }, { num: '4', name: 'CEN. IZQ' }, { num: '5', name: 'LAT. IZQ' },
+    { num: '6', name: 'MED. DEF' }, { num: '8', name: 'MED. DER' }, { num: '10', name: 'MED. IZQ' },
+    { num: '7', name: 'EXT. DER' }, { num: '11', name: 'EXT. IZQ' }, { num: '9', name: 'DELANTERO' }
+  ],
+
+  timerIsRunning: false,
+  timerElapsed: 0,
+  
+  isGoalAnim: false,
+  goalTeam: null,
+  ws: null,
+
+  updateState: (newState) => set((state) => ({ ...state, ...newState })),
+  
+  loadOverlay: async (overlayId = 'default') => {
+    try {
+      const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+      const res = await fetch(`${baseUrl}/api/overlays/${overlayId}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.settings) {
+          set((state) => ({ ...state, ...data.settings }));
+        }
+      }
+    } catch (e) {
+      console.error('Error al cargar overlay:', e);
+    }
+  },
+
+  broadcast: (payload) => {
+    const ws = get().ws;
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type: 'UPDATE_OVERLAY', payload }));
+    }
+  },
+
+  connectWebSocket: (role, overlayId = 'default') => {
+    const currentWs = get().ws;
+    if (currentWs) {
+      if (currentWs.url.endsWith(`/ws/${overlayId}`)) return;
+      currentWs.onclose = null; // Evitar que el viejo intente reconectarse
+      currentWs.close();
+    }
+
+    const baseUrl = import.meta.env.VITE_API_URL?.replace('http', 'ws') || 'ws://localhost:3000';
+    const wsUrl = `${baseUrl}/ws/${overlayId}`;
+    const ws = new WebSocket(wsUrl);
+
+    ws.onopen = () => console.log(`[${role}] Conectado al WebSocket sala: ${overlayId}`);
+
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type === 'UPDATE_OVERLAY') {
+          set((state) => ({ ...state, ...data.payload }));
+          
+          if (data.payload.triggerGoal && role === 'renderer') {
+            set({ isGoalAnim: true, goalTeam: data.payload.triggerGoal });
+            setTimeout(() => set({ isGoalAnim: false, goalTeam: null }), 5000);
+          }
+        }
+      } catch (e) {
+        console.error('Error parseando ws:', e);
+      }
+    };
+
+    ws.onclose = () => {
+      console.log(`[${role}] Desconectado de sala ${overlayId}, reconectando...`);
+      set({ ws: null });
+      setTimeout(() => get().connectWebSocket(role, overlayId), 2000);
+    };
+
+    set({ ws });
+  }
+}));

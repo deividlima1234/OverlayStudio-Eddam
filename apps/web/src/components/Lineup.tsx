@@ -2,7 +2,7 @@ import { useOverlayStore } from '../store/useOverlayStore';
 
 export default function Lineup({ isPreview = false }: { isPreview?: boolean }) {
   const state = useOverlayStore();
-  const visible = isPreview || state.isVisible;
+  const visible = (isPreview || state.isVisible) && !state.isReplayActive;
 
   const isHome = state.lineupTeamVisible === 'home';
   const playersData = isHome ? state.homePlayers : state.awayPlayers;

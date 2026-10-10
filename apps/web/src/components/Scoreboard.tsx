@@ -2,7 +2,7 @@ import { useOverlayStore } from '../store/useOverlayStore';
 
 export default function Scoreboard({ isPreview = false }: { isPreview?: boolean }) {
   const state = useOverlayStore();
-  const visible = isPreview || state.isVisible;
+  const visible = (isPreview || state.isVisible) && !state.isReplayActive;
   
   const formatTime = (totalSeconds: number) => {
     const minutes = Math.floor(totalSeconds / 60);

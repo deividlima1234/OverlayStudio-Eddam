@@ -4,6 +4,7 @@ import { ArrowLeft, Save, Plus, Minus, Trophy, Link as LinkIcon, Settings, Play,
 import { useOverlayStore } from '../store/useOverlayStore';
 import Scoreboard from '../components/Scoreboard';
 import Lineup from '../components/Lineup';
+import ReplayOverlay from '../components/ReplayOverlay';
 
 export default function Editor() {
   const { id } = useParams<{ id: string }>();
@@ -57,6 +58,14 @@ export default function Editor() {
     const newScore = team === 'home' ? state.homeScore + 1 : state.awayScore + 1;
     updateField(team === 'home' ? 'homeScore' : 'awayScore', newScore);
     state.broadcast({ triggerGoal: team });
+  };
+
+  const triggerReplay = () => {
+    state.updateState({ isReplayActive: true });
+    state.broadcast({ triggerReplay: true });
+    setTimeout(() => {
+      state.updateState({ isReplayActive: false });
+    }, 10000);
   };
 
   const formatTime = (totalSeconds: number) => {
@@ -239,6 +248,22 @@ export default function Editor() {
                       <button onClick={() => triggerGoal('away')} className="w-full btn-primary bg-red-600 hover:bg-red-500 py-2 text-sm font-bold shadow-lg shadow-red-900/50">¡GOL VISITANTE!</button>
                     </div>
                   </div>
+                  
+                  {/* Botón Especial: Replay / Destacado */}
+                  <div className="card p-4 bg-gradient-to-r from-yellow-600/20 to-yellow-800/20 border-yellow-500/30 shadow-lg">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-yellow-500 mb-3 flex items-center gap-2">
+                      <Play className="w-4 h-4" />
+                      Efecto Destacado
+                    </h3>
+                    <button 
+                      onClick={triggerReplay}
+                      disabled={state.isReplayActive}
+                      className={`w-full py-3 rounded-lg font-bold italic tracking-widest text-lg uppercase transition-all shadow-xl flex items-center justify-center gap-2 ${state.isReplayActive ? 'bg-gray-600 text-gray-400 cursor-not-allowed' : 'bg-gradient-to-r from-yellow-500 to-yellow-600 hover:to-yellow-500 text-black border-2 border-yellow-400 hover:scale-[1.02]'}`}
+                    >
+                      <Trophy className="w-5 h-5" />
+                      {state.isReplayActive ? 'Reproduciendo...' : 'Lanzar Replay'}
+                    </button>
+                  </div>
                 </section>
               )}
             </>
@@ -416,6 +441,7 @@ export default function Editor() {
             <span className="absolute top-4 left-4 text-[10px] font-bold px-2 py-1 rounded bg-yellow-500 text-black z-30 uppercase tracking-widest shadow-lg">Preview (Estudio)</span>
             <div className="w-[1920px] h-[1080px] origin-top-left relative" style={{ transform: `scale(${scale})` }}>
                 {id === 'liga-pro' ? <Lineup isPreview /> : <Scoreboard isPreview />}
+                <ReplayOverlay />
             </div>
           </div>
 
@@ -427,6 +453,7 @@ export default function Editor() {
             <span className="absolute top-4 left-4 text-[10px] font-bold px-2 py-1 rounded bg-red-600 text-white z-30 uppercase tracking-widest shadow-lg animate-pulse">Live (Programa)</span>
             <div className="w-[1920px] h-[1080px] origin-top-left relative" style={{ transform: `scale(${scale})` }}>
                 {id === 'liga-pro' ? <Lineup /> : <Scoreboard />}
+                <ReplayOverlay />
             </div>
           </div>
           

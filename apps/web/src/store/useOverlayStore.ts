@@ -28,6 +28,7 @@ interface OverlayState {
   // Animaciones
   isGoalAnim: boolean;
   goalTeam: 'home' | 'away' | null;
+  isReplayActive: boolean;
   
   // WS
   ws: WebSocket | null;
@@ -52,6 +53,7 @@ export const useOverlayStore = create<OverlayState>((set, get) => ({
   awayLogo: '',
   
   isVisible: false,
+  isReplayActive: false,
   
   lineupTeamVisible: 'home',
   homePlayers: [
@@ -121,6 +123,10 @@ export const useOverlayStore = create<OverlayState>((set, get) => ({
           if (data.payload.triggerGoal && role === 'renderer') {
             set({ isGoalAnim: true, goalTeam: data.payload.triggerGoal });
             setTimeout(() => set({ isGoalAnim: false, goalTeam: null }), 5000);
+          }
+          if (data.payload.triggerReplay) {
+            set({ isReplayActive: true });
+            setTimeout(() => set({ isReplayActive: false }), 10000);
           }
         }
       } catch (e) {

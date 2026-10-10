@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { useOverlayStore } from '../store/useOverlayStore';
 import Scoreboard from '../components/Scoreboard';
 import Lineup from '../components/Lineup';
+import ReplayOverlay from '../components/ReplayOverlay';
 
 export default function OverlayRender() {
   const { id } = useParams<{ id: string }>();
@@ -54,6 +55,8 @@ export default function OverlayRender() {
       )}
 
       {id === 'liga-pro' ? <Lineup /> : <Scoreboard />}
+      
+      <ReplayOverlay />
     </div>
   );
 }

@@ -303,8 +303,9 @@ export default function Editor() {
                     </button>
                   </div>
                 </section>
-                </>
               )}
+              </>
+            )}
             </>
           ) : activeTab === 'personalizar' ? (
             <div className="space-y-4">

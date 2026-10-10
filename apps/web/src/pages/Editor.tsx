@@ -114,6 +114,16 @@ export default function Editor() {
             lineupTeamVisible: state.lineupTeamVisible,
             homePlayers: state.homePlayers,
             awayPlayers: state.awayPlayers,
+            
+            // Publicidad
+            adTitle: state.adTitle,
+            adSubtitle: state.adSubtitle,
+            adText: state.adText,
+            adPhone: state.adPhone,
+            isAdVisible: state.isAdVisible,
+            adMode: state.adMode,
+            adDurationVisible: state.adDurationVisible,
+            adDurationHidden: state.adDurationHidden,
           }
         })
       });

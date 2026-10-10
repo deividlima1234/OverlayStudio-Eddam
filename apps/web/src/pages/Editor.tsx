@@ -364,6 +364,13 @@ export default function Editor() {
                     <div className="mt-4 pt-4 border-t border-white/5 space-y-3">
                       <div className="flex flex-col gap-1">
                         <div className="flex justify-between text-xs text-textMuted">
+                          <span>Posición Horizontal (X)</span>
+                          <span className="font-mono bg-black/50 px-1 rounded">{state.tickerOffsetX}px</span>
+                        </div>
+                        <input type="range" min="-1000" max="1000" value={state.tickerOffsetX} onChange={(e) => updateField('tickerOffsetX', Number(e.target.value))} className="w-full accent-blue-500" />
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <div className="flex justify-between text-xs text-textMuted">
                           <span>Posición Vertical (Y)</span>
                           <span className="font-mono bg-black/50 px-1 rounded">{state.tickerOffsetY}px</span>
                         </div>
@@ -423,6 +430,13 @@ export default function Editor() {
 
                     {/* Mandos de Posición */}
                     <div className="mt-4 pt-4 border-t border-white/5 space-y-3">
+                      <div className="flex flex-col gap-1">
+                        <div className="flex justify-between text-xs text-textMuted">
+                          <span>Posición Horizontal (X)</span>
+                          <span className="font-mono bg-black/50 px-1 rounded">{state.popupOffsetX}px</span>
+                        </div>
+                        <input type="range" min="-1000" max="1000" value={state.popupOffsetX} onChange={(e) => updateField('popupOffsetX', Number(e.target.value))} className="w-full accent-blue-500" />
+                      </div>
                       <div className="flex flex-col gap-1">
                         <div className="flex justify-between text-xs text-textMuted">
                           <span>Posición Vertical (Y)</span>

@@ -1,4 +1,3 @@
-import React from 'react';
 import { useOverlayStore } from '../store/useOverlayStore';
 
 export default function Lineup() {

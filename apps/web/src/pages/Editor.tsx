@@ -22,7 +22,7 @@ export default function Editor() {
   }, [id]);
 
   useEffect(() => {
-    let interval: NodeJS.Timeout;
+    let interval: ReturnType<typeof setInterval>;
     if (state.timerIsRunning) {
       interval = setInterval(() => {
         state.updateState({ timerElapsed: state.timerElapsed + 1 });

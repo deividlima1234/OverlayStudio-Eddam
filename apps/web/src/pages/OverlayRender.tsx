@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useOverlayStore } from '../store/useOverlayStore';
 import Scoreboard from '../components/Scoreboard';
@@ -22,7 +22,7 @@ export default function OverlayRender() {
 
   // Lógica del Cronómetro local (Renderer)
   useEffect(() => {
-    let interval: NodeJS.Timeout;
+    let interval: ReturnType<typeof setInterval>;
     if (state.timerIsRunning) {
       interval = setInterval(() => {
         state.updateState({ timerElapsed: state.timerElapsed + 1 });

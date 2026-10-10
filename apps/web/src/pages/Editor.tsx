@@ -128,6 +128,11 @@ export default function Editor() {
 
             sponsorLogo: state.sponsorLogo,
             isSponsorVisible: state.isSponsorVisible,
+
+            adOffsetX: state.adOffsetX,
+            adOffsetY: state.adOffsetY,
+            sponsorOffsetX: state.sponsorOffsetX,
+            sponsorOffsetY: state.sponsorOffsetY,
           }
         })
       });
@@ -251,6 +256,24 @@ export default function Editor() {
                         Subir Imagen
                       </label>
                     </div>
+
+                    {/* Mandos de Posición */}
+                    <div className="mt-4 pt-4 border-t border-white/5 space-y-3">
+                      <div className="flex flex-col gap-1">
+                        <div className="flex justify-between text-xs text-textMuted">
+                          <span>Posición Horizontal (X)</span>
+                          <span className="font-mono bg-black/50 px-1 rounded">{state.sponsorOffsetX}px</span>
+                        </div>
+                        <input type="range" min="-1000" max="1000" value={state.sponsorOffsetX} onChange={(e) => updateField('sponsorOffsetX', Number(e.target.value))} className="w-full accent-blue-500" />
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <div className="flex justify-between text-xs text-textMuted">
+                          <span>Posición Vertical (Y)</span>
+                          <span className="font-mono bg-black/50 px-1 rounded">{state.sponsorOffsetY}px</span>
+                        </div>
+                        <input type="range" min="-1000" max="1000" value={state.sponsorOffsetY} onChange={(e) => updateField('sponsorOffsetY', Number(e.target.value))} className="w-full accent-blue-500" />
+                      </div>
+                    </div>
                   </div>
 
                   <div className="card p-5 bg-surfaceHover border-blue-500/20 shadow-md">
@@ -282,6 +305,23 @@ export default function Editor() {
                       <div>
                         <label className="text-xs text-textMuted mb-1 block">WhatsApp (Solo números con código de país)</label>
                         <input type="text" value={state.adPhone} onChange={(e) => updateField('adPhone', e.target.value)} className="w-full bg-background border border-border rounded-lg p-2 text-white" placeholder="51983032706" />
+                      </div>
+                      </div>
+                    {/* Mandos de Posición */}
+                    <div className="mt-4 pt-4 border-t border-white/5 space-y-3">
+                      <div className="flex flex-col gap-1">
+                        <div className="flex justify-between text-xs text-textMuted">
+                          <span>Posición Horizontal (X)</span>
+                          <span className="font-mono bg-black/50 px-1 rounded">{state.adOffsetX}px</span>
+                        </div>
+                        <input type="range" min="-1000" max="1000" value={state.adOffsetX} onChange={(e) => updateField('adOffsetX', Number(e.target.value))} className="w-full accent-blue-500" />
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <div className="flex justify-between text-xs text-textMuted">
+                          <span>Posición Vertical (Y)</span>
+                          <span className="font-mono bg-black/50 px-1 rounded">{state.adOffsetY}px</span>
+                        </div>
+                        <input type="range" min="-1000" max="1000" value={state.adOffsetY} onChange={(e) => updateField('adOffsetY', Number(e.target.value))} className="w-full accent-blue-500" />
                       </div>
                     </div>
                   </div>

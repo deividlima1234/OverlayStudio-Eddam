@@ -35,6 +35,12 @@ interface OverlayState {
   sponsorLogo: string;
   isSponsorVisible: boolean;
   
+  // Posicionamiento
+  adOffsetX: number;
+  adOffsetY: number;
+  sponsorOffsetX: number;
+  sponsorOffsetY: number;
+  
   // Tiempo
   timerIsRunning: boolean;
   timerElapsed: number; // en segundos
@@ -94,6 +100,11 @@ export const useOverlayStore = create<OverlayState>((set, get) => ({
 
   sponsorLogo: '',
   isSponsorVisible: true,
+
+  adOffsetX: 0,
+  adOffsetY: 0,
+  sponsorOffsetX: 0,
+  sponsorOffsetY: 0,
 
   timerIsRunning: false,
   timerElapsed: 0,

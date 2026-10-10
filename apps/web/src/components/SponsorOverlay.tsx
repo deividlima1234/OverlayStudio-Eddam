@@ -10,8 +10,11 @@ export default function SponsorOverlay({ isPreview = false }: { isPreview?: bool
   if (!state.sponsorLogo || !visible) return null;
 
   return (
-    <div className="absolute top-12 right-12 z-50 pointer-events-none origin-top-right animate-fade-in">
-      <div className="w-[300px] h-[300px] bg-black/40 backdrop-blur-md rounded-3xl p-6 border-2 border-white/10 shadow-2xl flex items-center justify-center relative overflow-hidden">
+    <div 
+      className="absolute top-0 right-0 z-50 pointer-events-none"
+      style={{ transform: `translate(${state.sponsorOffsetX}px, ${state.sponsorOffsetY}px)` }}
+    >
+      <div className="w-[300px] h-[300px] origin-top-right animate-fade-in bg-black/40 backdrop-blur-md rounded-3xl p-6 border-2 border-white/10 shadow-2xl flex items-center justify-center relative overflow-hidden">
         {/* Efecto de brillo detrás del logo */}
         <div className="absolute inset-0 bg-gradient-to-tr from-white/5 to-transparent"></div>
         <img 

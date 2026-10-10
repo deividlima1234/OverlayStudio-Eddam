@@ -14,8 +14,12 @@ export default function AdOverlay({ isPreview = false }: { isPreview?: boolean }
   const outStartPct = 97;
 
   return (
-    <div className={`absolute bottom-20 left-20 w-[1000px] h-[240px] z-50 pointer-events-none origin-bottom-left ${state.adMode === 'loop' ? 'animate-ad-loop' : 'animate-slide-up'}`}>
-      <div className="w-full h-full bg-[#0f0f11]/90 backdrop-blur-xl border border-blue-500/40 rounded-2xl shadow-[0_0_30px_rgba(59,130,246,0.3)] flex overflow-hidden">
+    <div 
+      className="absolute bottom-0 left-0 z-50 pointer-events-none"
+      style={{ transform: `translate(${state.adOffsetX}px, ${state.adOffsetY}px)` }}
+    >
+      <div className={`w-[1000px] h-[240px] origin-bottom-left ${state.adMode === 'loop' ? 'animate-ad-loop' : 'animate-slide-up'}`}>
+        <div className="w-full h-full bg-[#0f0f11]/90 backdrop-blur-xl border border-blue-500/40 rounded-2xl shadow-[0_0_30px_rgba(59,130,246,0.3)] flex overflow-hidden">
         
         {/* Decoración lateral brillante */}
         <div className="w-3 h-full bg-blue-500 shadow-[0_0_20px_#3b82f6] animate-pulse"></div>
@@ -63,6 +67,7 @@ export default function AdOverlay({ isPreview = false }: { isPreview?: boolean }
           }
         `}</style>
       )}
+      </div>
     </div>
   );
 }

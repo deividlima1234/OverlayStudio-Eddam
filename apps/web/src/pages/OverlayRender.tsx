@@ -6,6 +6,8 @@ import Lineup from '../components/Lineup';
 import ReplayOverlay from '../components/ReplayOverlay';
 import AdOverlay from '../components/AdOverlay';
 import SponsorOverlay from '../components/SponsorOverlay';
+import TickerOverlay from '../components/TickerOverlay';
+import PopupOverlay from '../components/PopupOverlay';
 
 export default function OverlayRender() {
   const { id } = useParams<{ id: string }>();
@@ -74,6 +76,8 @@ export default function OverlayRender() {
         <>
           <AdOverlay />
           <SponsorOverlay />
+          <TickerOverlay />
+          <PopupOverlay />
         </>
       ) : (
         <>

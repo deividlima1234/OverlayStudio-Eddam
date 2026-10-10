@@ -41,6 +41,19 @@ interface OverlayState {
   sponsorOffsetX: number;
   sponsorOffsetY: number;
   
+  // Zona 3: Ticker (Cinta Inferior)
+  tickerText: string;
+  isTickerVisible: boolean;
+  tickerOffsetX: number;
+  tickerOffsetY: number;
+
+  // Zona 4: Pop-up Lateral
+  popupImage: string;
+  popupText: string;
+  isPopupVisible: boolean;
+  popupOffsetX: number;
+  popupOffsetY: number;
+  
   // Tiempo
   timerIsRunning: boolean;
   timerElapsed: number; // en segundos
@@ -105,6 +118,17 @@ export const useOverlayStore = create<OverlayState>((set, get) => ({
   adOffsetY: 0,
   sponsorOffsetX: 0,
   sponsorOffsetY: 0,
+
+  tickerText: 'GRACIAS POR ACOMPAÑARNOS EN ESTA TRANSMISIÓN EN VIVO • SÍGUENOS EN NUESTRAS REDES SOCIALES',
+  isTickerVisible: true,
+  tickerOffsetX: 0,
+  tickerOffsetY: 0,
+
+  popupImage: '',
+  popupText: '¡Promoción Especial!',
+  isPopupVisible: true,
+  popupOffsetX: 0,
+  popupOffsetY: 0,
 
   timerIsRunning: false,
   timerElapsed: 0,

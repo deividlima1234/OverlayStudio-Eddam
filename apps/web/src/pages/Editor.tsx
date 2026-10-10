@@ -7,6 +7,8 @@ import Lineup from '../components/Lineup';
 import ReplayOverlay from '../components/ReplayOverlay';
 import AdOverlay from '../components/AdOverlay';
 import SponsorOverlay from '../components/SponsorOverlay';
+import TickerOverlay from '../components/TickerOverlay';
+import PopupOverlay from '../components/PopupOverlay';
 
 export default function Editor() {
   const { id } = useParams<{ id: string }>();
@@ -133,6 +135,17 @@ export default function Editor() {
             adOffsetY: state.adOffsetY,
             sponsorOffsetX: state.sponsorOffsetX,
             sponsorOffsetY: state.sponsorOffsetY,
+
+            tickerText: state.tickerText,
+            isTickerVisible: state.isTickerVisible,
+            tickerOffsetX: state.tickerOffsetX,
+            tickerOffsetY: state.tickerOffsetY,
+
+            popupImage: state.popupImage,
+            popupText: state.popupText,
+            isPopupVisible: state.isPopupVisible,
+            popupOffsetX: state.popupOffsetX,
+            popupOffsetY: state.popupOffsetY,
           }
         })
       });
@@ -306,7 +319,8 @@ export default function Editor() {
                         <label className="text-xs text-textMuted mb-1 block">WhatsApp (Solo números con código de país)</label>
                         <input type="text" value={state.adPhone} onChange={(e) => updateField('adPhone', e.target.value)} className="w-full bg-background border border-border rounded-lg p-2 text-white" placeholder="51983032706" />
                       </div>
-                      </div>
+                    </div>
+
                     {/* Mandos de Posición */}
                     <div className="mt-4 pt-4 border-t border-white/5 space-y-3">
                       <div className="flex flex-col gap-1">
@@ -322,6 +336,99 @@ export default function Editor() {
                           <span className="font-mono bg-black/50 px-1 rounded">{state.adOffsetY}px</span>
                         </div>
                         <input type="range" min="-1000" max="1000" value={state.adOffsetY} onChange={(e) => updateField('adOffsetY', Number(e.target.value))} className="w-full accent-blue-500" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* CINTA INFERIOR (TICKER) */}
+                  <div className="card p-5 bg-surfaceHover border-blue-500/20 shadow-md">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-blue-400 flex items-center gap-2">
+                        <Settings className="w-4 h-4" />
+                        Cinta Inferior (Ticker)
+                      </h3>
+                      <button 
+                        onClick={() => updateField('isTickerVisible', !state.isTickerVisible)}
+                        className={`text-[10px] px-2 py-1 rounded font-bold ${state.isTickerVisible ? 'bg-green-600 hover:bg-green-500' : 'bg-red-600 hover:bg-red-500'}`}
+                      >
+                        {state.isTickerVisible ? <><Eye className="w-3 h-3 inline mr-1" /> Visible</> : <><EyeOff className="w-3 h-3 inline mr-1" /> Oculto</>}
+                      </button>
+                    </div>
+                    <div className="space-y-3">
+                      <div>
+                        <label className="text-xs text-textMuted mb-1 block">Texto de Noticias/Agradecimientos</label>
+                        <input type="text" value={state.tickerText} onChange={(e) => updateField('tickerText', e.target.value)} className="w-full bg-background border border-border rounded-lg p-2 text-white" />
+                      </div>
+                    </div>
+                    {/* Mandos de Posición */}
+                    <div className="mt-4 pt-4 border-t border-white/5 space-y-3">
+                      <div className="flex flex-col gap-1">
+                        <div className="flex justify-between text-xs text-textMuted">
+                          <span>Posición Vertical (Y)</span>
+                          <span className="font-mono bg-black/50 px-1 rounded">{state.tickerOffsetY}px</span>
+                        </div>
+                        <input type="range" min="-1000" max="1000" value={state.tickerOffsetY} onChange={(e) => updateField('tickerOffsetY', Number(e.target.value))} className="w-full accent-blue-500" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* POP-UP LATERAL */}
+                  <div className="card p-5 bg-surfaceHover border-blue-500/20 shadow-md">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-blue-400 flex items-center gap-2">
+                        <ImageIcon className="w-4 h-4" />
+                        Pop-up Lateral (Promo)
+                      </h3>
+                      <button 
+                        onClick={() => updateField('isPopupVisible', !state.isPopupVisible)}
+                        className={`text-[10px] px-2 py-1 rounded font-bold ${state.isPopupVisible ? 'bg-green-600 hover:bg-green-500' : 'bg-red-600 hover:bg-red-500'}`}
+                      >
+                        {state.isPopupVisible ? <><Eye className="w-3 h-3 inline mr-1" /> Visible</> : <><EyeOff className="w-3 h-3 inline mr-1" /> Oculto</>}
+                      </button>
+                    </div>
+                    
+                    <div className="flex items-center gap-4 mb-4">
+                      {state.popupImage ? (
+                        <img src={state.popupImage} alt="Popup" className="w-16 h-16 object-cover bg-black/50 p-1 rounded-lg border border-white/10" />
+                      ) : (
+                        <div className="w-16 h-16 bg-white/5 rounded-lg flex items-center justify-center border border-white/5">
+                          <ImageIcon className="w-6 h-6 text-white/20" />
+                        </div>
+                      )}
+                      <input 
+                        type="file" 
+                        accept="image/*" 
+                        id="popupImageInput" 
+                        className="hidden" 
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            const reader = new FileReader();
+                            reader.onloadend = () => updateField('popupImage', reader.result);
+                            reader.readAsDataURL(file);
+                          }
+                        }} 
+                      />
+                      <label htmlFor="popupImageInput" className="bg-white/10 hover:bg-white/20 px-4 py-2 rounded-lg text-xs font-bold cursor-pointer transition-colors text-white">
+                        Subir Imagen
+                      </label>
+                    </div>
+
+                    <div className="space-y-3">
+                      <div>
+                        <label className="text-xs text-textMuted mb-1 block">Texto de la Promoción</label>
+                        <input type="text" value={state.popupText} onChange={(e) => updateField('popupText', e.target.value)} className="w-full bg-background border border-border rounded-lg p-2 text-white" />
+                      </div>
+                    </div>
+
+                    {/* Mandos de Posición */}
+                    <div className="mt-4 pt-4 border-t border-white/5 space-y-3">
+                      <div className="flex flex-col gap-1">
+                        <div className="flex justify-between text-xs text-textMuted">
+                          <span>Posición Vertical (Y)</span>
+                          <span className="font-mono bg-black/50 px-1 rounded">{state.popupOffsetY}px</span>
+                        </div>
+                        <input type="range" min="-1000" max="1000" value={state.popupOffsetY} onChange={(e) => updateField('popupOffsetY', Number(e.target.value))} className="w-full accent-blue-500" />
                       </div>
                     </div>
                   </div>
@@ -622,6 +729,8 @@ export default function Editor() {
                   <>
                     <AdOverlay isPreview />
                     <SponsorOverlay isPreview />
+                    <TickerOverlay isPreview />
+                    <PopupOverlay isPreview />
                   </>
                 ) : (
                   <>
@@ -643,6 +752,8 @@ export default function Editor() {
                   <>
                     <AdOverlay />
                     <SponsorOverlay />
+                    <TickerOverlay />
+                    <PopupOverlay />
                   </>
                 ) : (
                   <>

@@ -26,9 +26,9 @@ export default function ReplayOverlay() {
       </div>
 
       {/* 3. STINGER TRANSITION (El barrido de pantalla inicial) */}
-      <div className="absolute inset-0 flex items-center justify-center z-50 overflow-hidden pointer-events-none">
+      <div className="absolute inset-0 z-50 overflow-hidden pointer-events-none">
         {/* Fondo diagonal cruzando la pantalla */}
-        <div className="absolute w-[150%] h-[150%] flex items-center justify-center animate-stinger-bg origin-center">
+        <div className="absolute w-[150%] h-[150%] top-1/2 -translate-y-1/2 flex items-center justify-center animate-stinger-bg origin-center" style={{ transform: 'translateY(-50%) rotate(-15deg)' }}>
           <div className="w-full h-[600px] bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600 shadow-[0_0_50px_rgba(0,0,0,0.8)] border-y-8 border-white flex items-center justify-center">
             
             <div className="relative z-10 flex items-center gap-10 animate-stinger-content">
@@ -54,9 +54,9 @@ export default function ReplayOverlay() {
           100% { transform: scaleX(0); }
         }
         @keyframes stinger-bg {
-          0% { transform: translate(100%, 100%) rotate(-15deg); }
-          40%, 60% { transform: translate(0, 0) rotate(-15deg); }
-          100% { transform: translate(-100%, -100%) rotate(-15deg); }
+          0% { left: 150%; }
+          40%, 60% { left: 50%; transform: translate(-50%, -50%) rotate(-15deg); }
+          100% { left: -150%; }
         }
         @keyframes stinger-content {
           0% { opacity: 0; transform: scale(0.5); }
@@ -71,11 +71,10 @@ export default function ReplayOverlay() {
           animation: progress 10s linear forwards;
         }
         .animate-stinger-bg {
-          /* El stinger dura 1.5s */
-          animation: stinger-bg 1.5s cubic-bezier(0.645, 0.045, 0.355, 1) forwards;
+          animation: stinger-bg 1.8s cubic-bezier(0.645, 0.045, 0.355, 1) forwards;
         }
         .animate-stinger-content {
-          animation: stinger-content 1.5s cubic-bezier(0.645, 0.045, 0.355, 1) forwards;
+          animation: stinger-content 1.8s cubic-bezier(0.645, 0.045, 0.355, 1) forwards;
         }
       `}</style>
     </div>

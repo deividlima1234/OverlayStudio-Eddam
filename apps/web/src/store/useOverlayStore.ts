@@ -27,6 +27,9 @@ interface OverlayState {
   adText: string;
   adPhone: string;
   isAdVisible: boolean;
+  adMode: 'loop' | 'static';
+  adDurationVisible: number;
+  adDurationHidden: number;
   
   // Tiempo
   timerIsRunning: boolean;
@@ -81,6 +84,9 @@ export const useOverlayStore = create<OverlayState>((set, get) => ({
   adText: 'Contrata la mejor calidad para tu evento',
   adPhone: '51983032706',
   isAdVisible: true,
+  adMode: 'loop',
+  adDurationVisible: 10,
+  adDurationHidden: 20,
 
   timerIsRunning: false,
   timerElapsed: 0,

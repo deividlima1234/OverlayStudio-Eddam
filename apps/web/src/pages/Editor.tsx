@@ -308,6 +308,38 @@ export default function Editor() {
             )}
             </>
           ) : activeTab === 'personalizar' ? (
+            id?.startsWith('ad-') ? (
+              <div className="space-y-4">
+                <div className="card p-5 bg-surfaceHover border-white/5 shadow-md">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-textMuted mb-4 flex items-center gap-2">
+                    <Settings className="w-4 h-4" /> Comportamiento de Animación
+                  </h3>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-xs text-textMuted mb-2 block">Modo de Publicidad</label>
+                      <div className="flex gap-2">
+                        <button onClick={() => updateField('adMode', 'loop')} className={`flex-1 py-2 rounded-lg font-bold text-xs transition-colors ${state.adMode === 'loop' ? 'bg-primary text-white' : 'bg-background border border-border text-textMuted hover:text-white'}`}>Loop Automático</button>
+                        <button onClick={() => updateField('adMode', 'static')} className={`flex-1 py-2 rounded-lg font-bold text-xs transition-colors ${state.adMode === 'static' ? 'bg-primary text-white' : 'bg-background border border-border text-textMuted hover:text-white'}`}>Estático (Siempre visible)</button>
+                      </div>
+                    </div>
+                    
+                    {state.adMode === 'loop' && (
+                      <>
+                        <div>
+                          <label className="text-xs text-textMuted mb-1 block">Tiempo Oculto (segundos)</label>
+                          <input type="number" min="5" value={state.adDurationHidden} onChange={(e) => updateField('adDurationHidden', Number(e.target.value) || 20)} className="w-full bg-background border border-border rounded-lg p-2 text-white" />
+                        </div>
+                        <div>
+                          <label className="text-xs text-textMuted mb-1 block">Tiempo Visible en Pantalla (segundos)</label>
+                          <input type="number" min="5" value={state.adDurationVisible} onChange={(e) => updateField('adDurationVisible', Number(e.target.value) || 10)} className="w-full bg-background border border-border rounded-lg p-2 text-white" />
+                        </div>
+                        <p className="text-[10px] text-textMuted/60 leading-tight">Nota: Los tiempos aplican un ciclo. Ejemplo: Oculto 20s, Visible 10s = Ciclo total de 30 segundos.</p>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ) : (
             <div className="space-y-4">
               <div className="card overflow-hidden bg-surfaceHover border border-white/10 shadow-lg">
                 <button 
@@ -400,6 +432,7 @@ export default function Editor() {
               </div>
 
             </div>
+            )
           ) : activeTab === 'jugadores' ? (
             <div className="space-y-4">
               <div className="flex items-center gap-2 mb-4 bg-surfaceHover p-1 rounded-lg">

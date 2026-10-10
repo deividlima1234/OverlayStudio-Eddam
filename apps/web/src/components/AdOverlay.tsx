@@ -7,8 +7,13 @@ export default function AdOverlay({ isPreview = false }: { isPreview?: boolean }
 
   if (!visible) return null;
 
+  const totalTime = state.adDurationVisible + state.adDurationHidden;
+  const hiddenPct = (state.adDurationHidden / totalTime) * 100;
+  const inEndPct = Math.min(hiddenPct + 3, 99);
+  const outStartPct = 97;
+
   return (
-    <div className="absolute bottom-20 left-20 w-[1000px] h-[240px] animate-ad-loop z-50 pointer-events-none origin-bottom-left">
+    <div className={`absolute bottom-20 left-20 w-[1000px] h-[240px] z-50 pointer-events-none origin-bottom-left ${state.adMode === 'loop' ? 'animate-ad-loop' : 'animate-slide-up'}`}>
       <div className="w-full h-full bg-[#0f0f11]/90 backdrop-blur-xl border border-blue-500/40 rounded-2xl shadow-[0_0_30px_rgba(59,130,246,0.3)] flex overflow-hidden">
         
         {/* Decoración lateral brillante */}
@@ -45,17 +50,18 @@ export default function AdOverlay({ isPreview = false }: { isPreview?: boolean }
         </div>
       </div>
 
-      <style>{`
-        @keyframes ad-loop {
-          0%, 65% { opacity: 0; transform: translateY(50px) scale(0.95); }
-          68%, 95% { opacity: 1; transform: translateY(0) scale(1); }
-          100% { opacity: 0; transform: translateY(50px) scale(0.95); }
-        }
-        .animate-ad-loop {
-          /* Loop de 30 segundos (Oculto 20s, Visible 10s) */
-          animation: ad-loop 30s cubic-bezier(0.34,1.56,0.64,1) infinite;
-        }
-      `}</style>
+      {state.adMode === 'loop' && (
+        <style>{`
+          @keyframes ad-loop {
+            0%, ${hiddenPct}% { opacity: 0; transform: translateY(50px) scale(0.95); }
+            ${inEndPct}%, ${outStartPct}% { opacity: 1; transform: translateY(0) scale(1); }
+            100% { opacity: 0; transform: translateY(50px) scale(0.95); }
+          }
+          .animate-ad-loop {
+            animation: ad-loop ${totalTime}s cubic-bezier(0.34,1.56,0.64,1) infinite;
+          }
+        `}</style>
+      )}
     </div>
   );
 }

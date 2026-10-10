@@ -115,6 +115,9 @@ export default function Editor() {
             homeLogo: state.homeLogo,
             awayLogo: state.awayLogo,
             lineupTeamVisible: state.lineupTeamVisible,
+            gameMode: state.gameMode,
+            homeFormation: state.homeFormation,
+            awayFormation: state.awayFormation,
             homePlayers: state.homePlayers,
             awayPlayers: state.awayPlayers,
             
@@ -661,19 +664,74 @@ export default function Editor() {
             )
           ) : activeTab === 'jugadores' ? (
             <div className="space-y-4">
-              <div className="flex items-center gap-2 mb-4 bg-surfaceHover p-1 rounded-lg">
+              
+              <div className="card p-4 bg-surfaceHover border border-white/5 space-y-3 shadow-md">
+                <label className="text-xs text-textMuted block font-bold uppercase tracking-wider">Modalidad de Juego (Ambos Equipos)</label>
+                <select 
+                  className="input-field w-full text-sm font-bold bg-background border-border"
+                  value={state.gameMode}
+                  onChange={(e) => updateField('gameMode', e.target.value as any)}
+                >
+                  <option value="11">Fútbol 11 (11 Jugadores)</option>
+                  <option value="9">Fútbol 9 (9 Jugadores)</option>
+                  <option value="7">Fútbol 7 (7 Jugadores)</option>
+                  <option value="5">Fútbol 5 / Futsal (5 Jugadores)</option>
+                </select>
+              </div>
+
+              <div className="flex items-center gap-2 bg-surfaceHover p-1 rounded-lg">
                 <button 
                   onClick={() => updateField('lineupTeamVisible', 'home')} 
-                  className={`flex-1 py-2 rounded font-bold text-xs uppercase ${state.lineupTeamVisible === 'home' ? 'bg-primary text-white' : 'text-textMuted hover:text-white'}`}
+                  className={`flex-1 py-2 rounded font-bold text-xs uppercase transition-colors ${state.lineupTeamVisible === 'home' ? 'bg-primary text-white shadow-lg' : 'text-textMuted hover:text-white'}`}
                 >
                   Local ({state.homeName})
                 </button>
                 <button 
                   onClick={() => updateField('lineupTeamVisible', 'away')} 
-                  className={`flex-1 py-2 rounded font-bold text-xs uppercase ${state.lineupTeamVisible === 'away' ? 'bg-primary text-white' : 'text-textMuted hover:text-white'}`}
+                  className={`flex-1 py-2 rounded font-bold text-xs uppercase transition-colors ${state.lineupTeamVisible === 'away' ? 'bg-primary text-white shadow-lg' : 'text-textMuted hover:text-white'}`}
                 >
                   Visitante ({state.awayName})
                 </button>
+              </div>
+
+              <div className="card p-4 bg-surfaceHover border border-white/5 space-y-3 shadow-md">
+                <label className="text-xs text-textMuted block font-bold uppercase tracking-wider">Formación Táctica ({state.lineupTeamVisible === 'home' ? 'Local' : 'Visitante'})</label>
+                <select
+                  className="input-field w-full text-sm font-bold bg-background border-border"
+                  value={state.lineupTeamVisible === 'home' ? state.homeFormation : state.awayFormation}
+                  onChange={(e) => updateField(state.lineupTeamVisible === 'home' ? 'homeFormation' : 'awayFormation', e.target.value)}
+                >
+                  {state.gameMode === '11' && (
+                    <>
+                      <option value="4-3-3">4-3-3 (Ofensiva)</option>
+                      <option value="4-4-2">4-4-2 (Clásica)</option>
+                      <option value="3-5-2">3-5-2 (Carrileros)</option>
+                      <option value="4-2-3-1">4-2-3-1 (Equilibrada)</option>
+                    </>
+                  )}
+                  {state.gameMode === '9' && (
+                    <>
+                      <option value="3-3-2">3-3-2 (Ofensiva)</option>
+                      <option value="3-2-3">3-2-3 (Ataque total)</option>
+                      <option value="4-3-1">4-3-1 (Defensiva)</option>
+                    </>
+                  )}
+                  {state.gameMode === '7' && (
+                    <>
+                      <option value="3-2-1">3-2-1 (Clásica)</option>
+                      <option value="2-3-1">2-3-1 (Ofensiva)</option>
+                      <option value="2-2-2">2-2-2 (Cuadrado Mágico)</option>
+                    </>
+                  )}
+                  {state.gameMode === '5' && (
+                    <>
+                      <option value="2-2">2-2 (Cuadrado)</option>
+                      <option value="1-2-1">1-2-1 (Rombo)</option>
+                      <option value="2-1-1">2-1-1 (Y)</option>
+                      <option value="1-1-2">1-1-2 (Embudo)</option>
+                    </>
+                  )}
+                </select>
               </div>
 
               <div className="space-y-2">

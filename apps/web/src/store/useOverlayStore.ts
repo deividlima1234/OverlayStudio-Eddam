@@ -18,6 +18,9 @@ interface OverlayState {
   
   // Alineaciones
   lineupTeamVisible: 'home' | 'away';
+  gameMode: '11' | '9' | '7' | '5';
+  homeFormation: string;
+  awayFormation: string;
   homePlayers: { num: string; name: string }[];
   awayPlayers: { num: string; name: string }[];
   
@@ -89,17 +92,22 @@ export const useOverlayStore = create<OverlayState>((set, get) => ({
   isReplayActive: false,
   
   lineupTeamVisible: 'home',
+  gameMode: '11',
+  homeFormation: '4-3-3',
+  awayFormation: '4-3-3',
   homePlayers: [
     { num: '1', name: 'PORTERO' },
     { num: '2', name: 'LAT. DER' }, { num: '3', name: 'CEN. DER' }, { num: '4', name: 'CEN. IZQ' }, { num: '5', name: 'LAT. IZQ' },
     { num: '6', name: 'MED. DEF' }, { num: '8', name: 'MED. DER' }, { num: '10', name: 'MED. IZQ' },
-    { num: '7', name: 'EXT. DER' }, { num: '11', name: 'EXT. IZQ' }, { num: '9', name: 'DELANTERO' }
+    { num: '7', name: 'EXT. DER' }, { num: '11', name: 'EXT. IZQ' }, { num: '9', name: 'DELANTERO' },
+    { num: '12', name: 'SUPLENTE' }, { num: '13', name: 'SUPLENTE' }
   ],
   awayPlayers: [
     { num: '1', name: 'PORTERO' },
     { num: '2', name: 'LAT. DER' }, { num: '3', name: 'CEN. DER' }, { num: '4', name: 'CEN. IZQ' }, { num: '5', name: 'LAT. IZQ' },
     { num: '6', name: 'MED. DEF' }, { num: '8', name: 'MED. DER' }, { num: '10', name: 'MED. IZQ' },
-    { num: '7', name: 'EXT. DER' }, { num: '11', name: 'EXT. IZQ' }, { num: '9', name: 'DELANTERO' }
+    { num: '7', name: 'EXT. DER' }, { num: '11', name: 'EXT. IZQ' }, { num: '9', name: 'DELANTERO' },
+    { num: '12', name: 'SUPLENTE' }, { num: '13', name: 'SUPLENTE' }
   ],
   
   adTitle: 'Servicio de Transmisión',

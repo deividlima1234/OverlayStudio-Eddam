@@ -12,7 +12,11 @@ export default function OverlayRender() {
   const [scale, setScale] = useState(1);
 
   useEffect(() => {
-    const handleResize = () => setScale(window.innerWidth / 1920);
+    const handleResize = () => {
+      const scaleX = window.innerWidth / 1920;
+      const scaleY = window.innerHeight / 1080;
+      setScale(Math.min(scaleX, scaleY));
+    };
     handleResize();
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
@@ -43,8 +47,8 @@ export default function OverlayRender() {
   }, [state.timerIsRunning, state.timerElapsed, state.updateState]);
 
   return (
-    <div className="w-screen h-screen overflow-hidden font-sans">
-      <div className="w-[1920px] h-[1080px] origin-top-left relative" style={{ transform: `scale(${scale})` }}>
+    <div className="w-screen h-screen overflow-hidden font-sans flex items-center justify-center">
+      <div className="w-[1920px] h-[1080px] relative" style={{ transform: `scale(${scale})`, transformOrigin: 'center center' }}>
         {state.isGoalAnim && (
         <div className="absolute inset-0 flex items-center justify-center z-50 bg-black/40 backdrop-blur-sm animate-fade-in">
           <div className="relative text-center animate-slide-up">

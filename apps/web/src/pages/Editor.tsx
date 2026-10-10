@@ -174,20 +174,57 @@ export default function Editor() {
               {/* Visibilidad Global */}
               <section className="card p-5 bg-surfaceHover border-white/5 shadow-md flex items-center justify-between">
                 <div>
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-textMuted mb-1">Estado del Marcador</h3>
-                  <p className="text-xs text-textMuted/70">Oculta para cambiar equipos sin que se vea en vivo.</p>
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-textMuted mb-1">
+                    {id?.startsWith('ad-') ? 'Estado de la Publicidad' : 'Estado del Marcador'}
+                  </h3>
+                  <p className="text-xs text-textMuted/70">
+                    {id?.startsWith('ad-') ? 'Oculta la publicidad en vivo.' : 'Oculta para cambiar equipos sin que se vea en vivo.'}
+                  </p>
                 </div>
                 <button 
-                  onClick={() => updateField('isVisible', !state.isVisible)}
+                  onClick={() => id?.startsWith('ad-') ? updateField('isAdVisible', !state.isAdVisible) : updateField('isVisible', !state.isVisible)}
                   className={`py-2 px-6 rounded-lg font-bold transition-all shadow-lg flex items-center gap-2 ${
-                    state.isVisible 
+                    (id?.startsWith('ad-') ? state.isAdVisible : state.isVisible)
                       ? 'bg-red-600 hover:bg-red-500 text-white shadow-red-900/50' 
                       : 'bg-green-600 hover:bg-green-500 text-white shadow-green-900/50'
                   }`}
                 >
-                  {state.isVisible ? <><EyeOff className="w-5 h-5"/> Ocultar</> : <><Eye className="w-5 h-5"/> Mostrar</>}
+                  {(id?.startsWith('ad-') ? state.isAdVisible : state.isVisible) ? <><EyeOff className="w-5 h-5"/> Ocultar</> : <><Eye className="w-5 h-5"/> Mostrar</>}
                 </button>
               </section>
+
+              {/* CONTROLES DE PUBLICIDAD */}
+              {id?.startsWith('ad-') && (
+                <section className="space-y-4">
+                  <div className="card p-5 bg-surfaceHover border-blue-500/20 shadow-md">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-blue-400 mb-4 flex items-center gap-2">
+                      <Settings className="w-4 h-4" />
+                      Textos de Publicidad
+                    </h3>
+                    <div className="space-y-3">
+                      <div>
+                        <label className="text-xs text-textMuted mb-1 block">Título Principal</label>
+                        <input type="text" value={state.adTitle} onChange={(e) => updateField('adTitle', e.target.value)} className="w-full bg-background border border-border rounded-lg p-2 text-white" />
+                      </div>
+                      <div>
+                        <label className="text-xs text-textMuted mb-1 block">Subtítulo (Resaltado)</label>
+                        <input type="text" value={state.adSubtitle} onChange={(e) => updateField('adSubtitle', e.target.value)} className="w-full bg-background border border-border rounded-lg p-2 text-white" />
+                      </div>
+                      <div>
+                        <label className="text-xs text-textMuted mb-1 block">Descripción</label>
+                        <input type="text" value={state.adText} onChange={(e) => updateField('adText', e.target.value)} className="w-full bg-background border border-border rounded-lg p-2 text-white" />
+                      </div>
+                      <div>
+                        <label className="text-xs text-textMuted mb-1 block">WhatsApp (Solo números con código de país)</label>
+                        <input type="text" value={state.adPhone} onChange={(e) => updateField('adPhone', e.target.value)} className="w-full bg-background border border-border rounded-lg p-2 text-white" placeholder="51983032706" />
+                      </div>
+                    </div>
+                  </div>
+                </section>
+              )}
+
+              {!id?.startsWith('ad-') && (
+                <>
 
               {id !== 'liga-pro' && (
                 <section className="card p-5 bg-surfaceHover border-white/5 shadow-md">
@@ -266,6 +303,7 @@ export default function Editor() {
                     </button>
                   </div>
                 </section>
+                </>
               )}
             </>
           ) : activeTab === 'personalizar' ? (

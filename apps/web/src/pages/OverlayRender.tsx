@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useOverlayStore } from '../store/useOverlayStore';
 import Scoreboard from '../components/Scoreboard';
@@ -8,9 +8,18 @@ import ReplayOverlay from '../components/ReplayOverlay';
 export default function OverlayRender() {
   const { id } = useParams<{ id: string }>();
   const state = useOverlayStore();
+  const [scale, setScale] = useState(1);
+
+  useEffect(() => {
+    const handleResize = () => setScale(window.innerWidth / 1920);
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   useEffect(() => {
     document.body.style.backgroundColor = 'transparent';
+    document.documentElement.style.backgroundColor = 'transparent';
     if (id) {
       state.connectWebSocket('renderer', id);
       state.loadOverlay(id);
@@ -33,8 +42,9 @@ export default function OverlayRender() {
   }, [state.timerIsRunning, state.timerElapsed, state.updateState]);
 
   return (
-    <div className="w-[1920px] h-[1080px] relative overflow-hidden font-sans">
-      {state.isGoalAnim && (
+    <div className="w-screen h-screen overflow-hidden font-sans">
+      <div className="w-[1920px] h-[1080px] origin-top-left relative" style={{ transform: `scale(${scale})` }}>
+        {state.isGoalAnim && (
         <div className="absolute inset-0 flex items-center justify-center z-50 bg-black/40 backdrop-blur-sm animate-fade-in">
           <div className="relative text-center animate-slide-up">
             <h1 
@@ -57,6 +67,7 @@ export default function OverlayRender() {
       {id === 'liga-pro' ? <Lineup /> : <Scoreboard />}
       
       <ReplayOverlay />
+      </div>
     </div>
   );
 }

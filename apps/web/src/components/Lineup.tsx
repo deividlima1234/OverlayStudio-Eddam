@@ -1,7 +1,8 @@
 import { useOverlayStore } from '../store/useOverlayStore';
 
-export default function Lineup() {
+export default function Lineup({ isPreview = false }: { isPreview?: boolean }) {
   const state = useOverlayStore();
+  const visible = isPreview || state.isVisible;
 
   const isHome = state.lineupTeamVisible === 'home';
   const playersData = isHome ? state.homePlayers : state.awayPlayers;
@@ -19,7 +20,7 @@ export default function Lineup() {
   ];
 
   return (
-    <div className={`absolute inset-0 flex items-center justify-center transition-all duration-700 ease-[cubic-bezier(0.34,1.56,0.64,1)] ${state.isVisible ? 'scale-100 opacity-100' : 'scale-90 opacity-0 pointer-events-none'}`}>
+    <div className={`absolute inset-0 flex items-center justify-center transition-all duration-700 ease-[cubic-bezier(0.34,1.56,0.64,1)] ${visible ? 'scale-100 opacity-100' : 'scale-90 opacity-0 pointer-events-none'}`}>
       
       <div className="w-[1100px] h-[650px] flex gap-8">
         
@@ -76,7 +77,7 @@ export default function Lineup() {
                     style={{ 
                       top: positions[idx]?.top || '50%', 
                       left: positions[idx]?.left || '50%',
-                      animation: state.isVisible ? `fadeScaleIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) ${idx * 0.1 + 0.3}s both` : 'none',
+                      animation: visible ? `fadeScaleIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) ${idx * 0.1 + 0.3}s both` : 'none',
                     }}
                   >
                     {/* Contenedor que contrarresta la perspectiva para no afectar la animación */}
@@ -110,7 +111,7 @@ export default function Lineup() {
           {/* MANAGER BANNER */}
           <div 
             className="absolute bottom-[-10px] left-1/2 -translate-x-1/2 flex items-center z-20 shadow-2xl"
-            style={{ animation: state.isVisible ? `slideUp 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) 1.5s both` : 'none' }}
+            style={{ animation: visible ? `slideUp 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) 1.5s both` : 'none' }}
           >
              <div className="bg-[#1d4ed8] text-white px-6 py-2 rounded-l-full font-bold text-sm tracking-wider uppercase">MANAGER</div>
              <div className="bg-white text-[#1d4ed8] px-8 py-2 rounded-r-full font-bold text-sm tracking-wider uppercase border border-l-0 border-gray-200">MANAGER NAME</div>
@@ -127,7 +128,7 @@ export default function Lineup() {
                 key={idx} 
                 className="flex h-[32px] w-full"
                 style={{
-                  animation: state.isVisible ? `slideInRight 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) ${idx * 0.1}s both` : 'none',
+                  animation: visible ? `slideInRight 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) ${idx * 0.1}s both` : 'none',
                 }}
               >
                 {/* Número */}

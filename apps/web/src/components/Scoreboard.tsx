@@ -1,7 +1,8 @@
 import { useOverlayStore } from '../store/useOverlayStore';
 
-export default function Scoreboard() {
+export default function Scoreboard({ isPreview = false }: { isPreview?: boolean }) {
   const state = useOverlayStore();
+  const visible = isPreview || state.isVisible;
   
   const formatTime = (totalSeconds: number) => {
     const minutes = Math.floor(totalSeconds / 60);
@@ -10,7 +11,7 @@ export default function Scoreboard() {
   };
 
   return (
-    <div className={`absolute left-1/2 -translate-x-1/2 flex flex-col items-center font-sans select-none drop-shadow-2xl text-white w-full max-w-[700px] transition-all duration-700 ease-[cubic-bezier(0.34,1.56,0.64,1)] origin-top ${state.isVisible ? 'top-12 scale-100 opacity-100' : '-top-20 scale-95 opacity-0 pointer-events-none'}`}>
+    <div className={`absolute left-1/2 -translate-x-1/2 flex flex-col items-center font-sans select-none drop-shadow-2xl text-white w-full max-w-[700px] transition-all duration-700 ease-[cubic-bezier(0.34,1.56,0.64,1)] origin-top ${visible ? 'top-12 scale-100 opacity-100' : '-top-20 scale-95 opacity-0 pointer-events-none'}`}>
       
       {/* LIVE Tab */}
       <div className="bg-[#cc0000] text-white text-[11px] font-bold px-8 py-1 rounded-t-lg tracking-widest uppercase shadow-md z-0 -mb-1">

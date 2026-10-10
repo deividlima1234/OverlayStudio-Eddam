@@ -389,14 +389,24 @@ export default function Editor() {
           </button>
         </div>
 
-        <div className="flex-1 flex items-center justify-center p-12">
-          <div className="w-[1280px] h-[720px] border-2 border-dashed border-border/50 rounded-2xl relative overflow-hidden bg-black/40">
-            <span className="absolute top-4 right-4 text-xs text-textMuted font-mono">Vista 720p Simulada</span>
-            
-            <div className="absolute inset-0 flex font-sans select-none scale-[0.85] origin-top pt-10">
+        <div className="flex-1 flex flex-col xl:flex-row gap-6 items-center justify-center p-8 overflow-hidden h-full">
+          
+          {/* MODO ESTUDIO (PREVIEW) */}
+          <div className="w-full max-w-[800px] aspect-video border-2 border-dashed border-white/20 rounded-2xl relative overflow-hidden bg-black/40 shadow-2xl flex-shrink shrink">
+            <span className="absolute top-4 left-4 text-[10px] font-bold px-2 py-1 rounded bg-yellow-500 text-black z-30 uppercase tracking-widest shadow-lg">Preview (Estudio)</span>
+            <div className="absolute inset-0 flex font-sans select-none scale-[0.45] origin-top pt-12 xl:scale-[0.55] 2xl:scale-[0.6]">
+                {id === 'liga-pro' ? <Lineup isPreview /> : <Scoreboard isPreview />}
+            </div>
+          </div>
+
+          {/* MODO LIVE (PROGRAM) */}
+          <div className="w-full max-w-[800px] aspect-video border-2 border-solid border-red-500/50 rounded-2xl relative overflow-hidden bg-black/40 shadow-2xl shadow-red-500/10 flex-shrink shrink">
+            <span className="absolute top-4 left-4 text-[10px] font-bold px-2 py-1 rounded bg-red-600 text-white z-30 uppercase tracking-widest shadow-lg animate-pulse">Live (Programa)</span>
+            <div className="absolute inset-0 flex font-sans select-none scale-[0.45] origin-top pt-12 xl:scale-[0.55] 2xl:scale-[0.6]">
                 {id === 'liga-pro' ? <Lineup /> : <Scoreboard />}
             </div>
           </div>
+          
         </div>
       </main>
     </div>

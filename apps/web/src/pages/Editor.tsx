@@ -100,8 +100,6 @@ export default function Editor() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: 'Marcador Personalizado',
-          type: 'soccer_scoreboard',
           settings: {
             isVisible: state.isVisible,
             homeName: state.homeName,

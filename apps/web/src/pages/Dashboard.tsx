@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LayoutTemplate, PlusCircle, MonitorPlay, Settings, Copy, X, Check } from 'lucide-react';
+import { LayoutTemplate, PlusCircle, MonitorPlay, Settings, Copy, X, Check, Trash2, AlertTriangle } from 'lucide-react';
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -45,6 +45,7 @@ export default function Dashboard() {
   const [editName, setEditName] = useState('');
   const [editId, setEditId] = useState('');
   const [copied, setCopied] = useState(false);
+  const [deleteProj, setDeleteProj] = useState<any>(null);
 
   const openModal = (e: React.MouseEvent, proj: any) => {
     e.stopPropagation();
@@ -54,11 +55,40 @@ export default function Dashboard() {
     setCopied(false);
   };
 
-  const saveSettings = () => {
+  const saveSettings = async () => {
     if (modalProject) {
-      setProjects(projects.map(p => p.id === modalProject.id ? { ...p, name: editName, id: editId } : p));
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+      try {
+        await fetch(`${API_URL}/api/overlays/${editId}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: editName, type: modalProject.type, settings: modalProject.settings })
+        });
+        
+        // Si el ID cambió, podríamos eliminar el viejo, pero para mantenerlo simple y seguro 
+        // solo actualizaremos si el ID es el mismo, de lo contrario se crea un duplicado (intencionado según advertencia)
+        if (editId !== modalProject.id) {
+           setProjects([...projects.filter(p => p.id !== modalProject.id), { ...modalProject, id: editId, name: editName }]);
+        } else {
+           setProjects(projects.map(p => p.id === modalProject.id ? { ...p, name: editName } : p));
+        }
+      } catch (e) {
+        console.error(e);
+      }
     }
     setModalProject(null);
+  };
+
+  const handleDelete = async () => {
+    if (!deleteProj) return;
+    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+    try {
+      await fetch(`${API_URL}/api/overlays/${deleteProj.id}`, { method: 'DELETE' });
+      setProjects(projects.filter(p => p.id !== deleteProj.id));
+      setDeleteProj(null);
+    } catch(e) {
+      console.error(e);
+    }
   };
 
   const copyUrl = () => {
@@ -101,13 +131,22 @@ export default function Dashboard() {
             <div key={proj.id} className="card group cursor-pointer hover:-translate-y-1" onClick={() => navigate(`/editor/${proj.id}`)}>
               <div className="flex justify-between items-start mb-4">
                 <h3 className="text-lg font-bold group-hover:text-primary transition-colors">{proj.name}</h3>
-                <button 
-                  onClick={(e) => openModal(e, proj)}
-                  className="p-2 hover:bg-white/10 rounded-lg transition-colors group-hover:bg-white/5"
-                  title="Configurar Proyecto"
-                >
-                  <Settings className="w-5 h-5 text-textMuted hover:text-white transition-colors" />
-                </button>
+                  <div className="flex gap-1">
+                    <button 
+                      onClick={(e) => openModal(e, proj)}
+                      className="p-2 hover:bg-white/10 rounded-lg transition-colors group-hover:bg-white/5"
+                      title="Configurar Proyecto"
+                    >
+                      <Settings className="w-5 h-5 text-textMuted hover:text-white transition-colors" />
+                    </button>
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); setDeleteProj(proj); }}
+                      className="p-2 hover:bg-red-500/20 rounded-lg transition-colors group-hover:bg-white/5"
+                      title="Eliminar Proyecto"
+                    >
+                      <Trash2 className="w-5 h-5 text-textMuted hover:text-red-500 transition-colors" />
+                    </button>
+                  </div>
               </div>
               <div className="flex items-center justify-between text-sm text-textMuted">
                 <span>{proj.overlays} Overlays activos</span>
@@ -186,6 +225,38 @@ export default function Dashboard() {
               <div className="pt-6 mt-6 border-t border-white/5 flex justify-end gap-3">
                 <button onClick={() => setModalProject(null)} className="px-6 py-2 rounded-lg font-bold text-textMuted hover:bg-white/5 transition-colors">Cancelar</button>
                 <button onClick={saveSettings} className="btn-primary px-8 py-2">Guardar Cambios</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Confirmación para Eliminar */}
+      {deleteProj && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[60] animate-fade-in" onClick={() => setDeleteProj(null)}>
+          <div className="bg-surface border border-red-500/30 rounded-2xl p-6 w-[400px] shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="flex flex-col items-center text-center gap-4">
+              <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center border border-red-500/50">
+                <AlertTriangle className="w-8 h-8 text-red-500" />
+              </div>
+              <h3 className="text-xl font-bold">¿Eliminar Proyecto?</h3>
+              <p className="text-textMuted text-sm">
+                Estás a punto de eliminar el proyecto <strong className="text-white">{deleteProj.name}</strong>. Esta acción no se puede deshacer.
+              </p>
+              
+              <div className="flex gap-3 w-full mt-4">
+                <button 
+                  onClick={() => setDeleteProj(null)} 
+                  className="flex-1 py-3 rounded-lg font-bold text-white bg-surfaceHover hover:bg-white/10 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button 
+                  onClick={handleDelete} 
+                  className="flex-1 py-3 rounded-lg font-bold text-white bg-red-600 hover:bg-red-500 transition-colors"
+                >
+                  Eliminar
+                </button>
               </div>
             </div>
           </div>

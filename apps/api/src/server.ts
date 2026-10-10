@@ -74,10 +74,24 @@ fastify.register(async function (fastify) {
       const existing = await db.select().from(overlays).where(eq(overlays.id, id));
       
       if (existing.length > 0) {
-        await db.update(overlays).set({ name, type, settings, updatedAt: new Date() }).where(eq(overlays.id, id));
+        const updateData: any = { settings, updatedAt: new Date() };
+        if (name) updateData.name = name;
+        if (type) updateData.type = type;
+        await db.update(overlays).set(updateData).where(eq(overlays.id, id));
       } else {
-        await db.insert(overlays).values({ id, name, type, settings });
+        await db.insert(overlays).values({ id, name: name || 'Proyecto Sin Nombre', type: type || 'publicidad', settings: settings || {} });
       }
+      return { success: true };
+    } catch (error: any) {
+      reply.code(500).send({ error: error.message });
+    }
+  });
+
+  // Eliminar Overlay
+  fastify.delete('/api/overlays/:id', async (req, reply) => {
+    const { id } = req.params as { id: string };
+    try {
+      await db.delete(overlays).where(eq(overlays.id, id));
       return { success: true };
     } catch (error: any) {
       reply.code(500).send({ error: error.message });

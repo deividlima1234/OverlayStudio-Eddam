@@ -818,7 +818,7 @@ export default function Editor() {
           </button>
         </div>
 
-        <div ref={containerRef} className="flex-1 flex flex-col gap-6 items-center justify-start p-4 lg:p-8 overflow-hidden w-full h-full pb-32">
+        <div ref={containerRef} className="flex-1 flex flex-col gap-6 items-center justify-start p-4 lg:p-8 w-full min-h-full pb-32">
           
           {/* MODO ESTUDIO (PREVIEW) */}
           <div 

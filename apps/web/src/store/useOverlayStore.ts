@@ -31,6 +31,10 @@ interface OverlayState {
   adDurationVisible: number;
   adDurationHidden: number;
   
+  // Sello Auspiciador (Superior Derecho)
+  sponsorLogo: string;
+  isSponsorVisible: boolean;
+  
   // Tiempo
   timerIsRunning: boolean;
   timerElapsed: number; // en segundos
@@ -87,6 +91,9 @@ export const useOverlayStore = create<OverlayState>((set, get) => ({
   adMode: 'loop',
   adDurationVisible: 10,
   adDurationHidden: 20,
+
+  sponsorLogo: '',
+  isSponsorVisible: true,
 
   timerIsRunning: false,
   timerElapsed: 0,

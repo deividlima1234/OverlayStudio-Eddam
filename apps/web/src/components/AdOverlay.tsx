@@ -3,7 +3,9 @@ import { useOverlayStore } from '../store/useOverlayStore';
 
 export default function AdOverlay({ isPreview = false }: { isPreview?: boolean }) {
   const state = useOverlayStore();
-  const visible = isPreview || state.isAdVisible;
+  // Para que el Master Switch funcione, si isVisible es false (oculto maestro), no mostramos nada, a menos que sea en Preview.
+  const isMasterVisible = isPreview || state.isVisible;
+  const visible = isMasterVisible && state.isAdVisible;
 
   if (!visible) return null;
 

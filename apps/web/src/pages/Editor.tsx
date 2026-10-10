@@ -6,6 +6,7 @@ import Scoreboard from '../components/Scoreboard';
 import Lineup from '../components/Lineup';
 import ReplayOverlay from '../components/ReplayOverlay';
 import AdOverlay from '../components/AdOverlay';
+import SponsorOverlay from '../components/SponsorOverlay';
 
 export default function Editor() {
   const { id } = useParams<{ id: string }>();
@@ -124,6 +125,9 @@ export default function Editor() {
             adMode: state.adMode,
             adDurationVisible: state.adDurationVisible,
             adDurationHidden: state.adDurationHidden,
+
+            sponsorLogo: state.sponsorLogo,
+            isSponsorVisible: state.isSponsorVisible,
           }
         })
       });
@@ -192,25 +196,76 @@ export default function Editor() {
                   </p>
                 </div>
                 <button 
-                  onClick={() => id?.startsWith('ad-') ? updateField('isAdVisible', !state.isAdVisible) : updateField('isVisible', !state.isVisible)}
+                  onClick={() => updateField('isVisible', !state.isVisible)}
                   className={`py-2 px-6 rounded-lg font-bold transition-all shadow-lg flex items-center gap-2 ${
-                    (id?.startsWith('ad-') ? state.isAdVisible : state.isVisible)
+                    state.isVisible
                       ? 'bg-red-600 hover:bg-red-500 text-white shadow-red-900/50' 
                       : 'bg-green-600 hover:bg-green-500 text-white shadow-green-900/50'
                   }`}
                 >
-                  {(id?.startsWith('ad-') ? state.isAdVisible : state.isVisible) ? <><EyeOff className="w-5 h-5"/> Ocultar</> : <><Eye className="w-5 h-5"/> Mostrar</>}
+                  {state.isVisible ? <><EyeOff className="w-5 h-5"/> Ocultar MASTER</> : <><Eye className="w-5 h-5"/> Mostrar MASTER</>}
                 </button>
               </section>
 
               {/* CONTROLES DE PUBLICIDAD */}
               {id?.startsWith('ad-') && (
                 <section className="space-y-4">
+                  {/* SELLO DEL AUSPICIADOR */}
                   <div className="card p-5 bg-surfaceHover border-blue-500/20 shadow-md">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-blue-400 mb-4 flex items-center gap-2">
-                      <Settings className="w-4 h-4" />
-                      Textos de Publicidad
-                    </h3>
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-blue-400 flex items-center gap-2">
+                        <ImageIcon className="w-4 h-4" />
+                        Sello Superior (Auspiciador)
+                      </h3>
+                      <button 
+                        onClick={() => updateField('isSponsorVisible', !state.isSponsorVisible)}
+                        className={`text-[10px] px-2 py-1 rounded font-bold ${state.isSponsorVisible ? 'bg-green-600 hover:bg-green-500' : 'bg-red-600 hover:bg-red-500'}`}
+                      >
+                        {state.isSponsorVisible ? <><Eye className="w-3 h-3 inline mr-1" /> Visible</> : <><EyeOff className="w-3 h-3 inline mr-1" /> Oculto</>}
+                      </button>
+                    </div>
+                    
+                    <div className="flex items-center gap-4">
+                      {state.sponsorLogo ? (
+                        <img src={state.sponsorLogo} alt="Sponsor" className="w-16 h-16 object-contain bg-black/50 p-1 rounded-lg border border-white/10" />
+                      ) : (
+                        <div className="w-16 h-16 bg-white/5 rounded-lg flex items-center justify-center border border-white/5">
+                          <ImageIcon className="w-6 h-6 text-white/20" />
+                        </div>
+                      )}
+                      <input 
+                        type="file" 
+                        accept="image/*" 
+                        id="sponsorLogoInput" 
+                        className="hidden" 
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            const reader = new FileReader();
+                            reader.onloadend = () => updateField('sponsorLogo', reader.result);
+                            reader.readAsDataURL(file);
+                          }
+                        }} 
+                      />
+                      <label htmlFor="sponsorLogoInput" className="bg-white/10 hover:bg-white/20 px-4 py-2 rounded-lg text-xs font-bold cursor-pointer transition-colors text-white">
+                        Subir Imagen
+                      </label>
+                    </div>
+                  </div>
+
+                  <div className="card p-5 bg-surfaceHover border-blue-500/20 shadow-md">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-blue-400 flex items-center gap-2">
+                        <Settings className="w-4 h-4" />
+                        Banner Inferior
+                      </h3>
+                      <button 
+                        onClick={() => updateField('isAdVisible', !state.isAdVisible)}
+                        className={`text-[10px] px-2 py-1 rounded font-bold ${state.isAdVisible ? 'bg-green-600 hover:bg-green-500' : 'bg-red-600 hover:bg-red-500'}`}
+                      >
+                        {state.isAdVisible ? <><Eye className="w-3 h-3 inline mr-1" /> Visible</> : <><EyeOff className="w-3 h-3 inline mr-1" /> Oculto</>}
+                      </button>
+                    </div>
                     <div className="space-y-3">
                       <div>
                         <label className="text-xs text-textMuted mb-1 block">Título Principal</label>
@@ -524,7 +579,10 @@ export default function Editor() {
             <span className="absolute top-4 left-4 text-[10px] font-bold px-2 py-1 rounded bg-yellow-500 text-black z-30 uppercase tracking-widest shadow-lg">Preview (Estudio)</span>
             <div className="w-[1920px] h-[1080px] origin-top-left relative" style={{ transform: `scale(${scale})` }}>
                 {id?.startsWith('ad-') ? (
-                  <AdOverlay isPreview />
+                  <>
+                    <AdOverlay isPreview />
+                    <SponsorOverlay isPreview />
+                  </>
                 ) : (
                   <>
                     {id === 'liga-pro' ? <Lineup isPreview /> : <Scoreboard isPreview />}
@@ -542,7 +600,10 @@ export default function Editor() {
             <span className="absolute top-4 left-4 text-[10px] font-bold px-2 py-1 rounded bg-red-600 text-white z-30 uppercase tracking-widest shadow-lg animate-pulse">Live (Programa)</span>
             <div className="w-[1920px] h-[1080px] origin-top-left relative" style={{ transform: `scale(${scale})` }}>
                 {id?.startsWith('ad-') ? (
-                  <AdOverlay />
+                  <>
+                    <AdOverlay />
+                    <SponsorOverlay />
+                  </>
                 ) : (
                   <>
                     {id === 'liga-pro' ? <Lineup /> : <Scoreboard />}

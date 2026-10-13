@@ -19,16 +19,18 @@ export default function Dashboard() {
         } else {
           // Datos por defecto si la DB está vacía
           setProjects([
-            { id: 'torneo-regional', name: 'Torneo Regional 2026', type: 'scoreboard', overlays: 3 },
-            { id: 'liga-pro', name: 'Liga Pro eSports', type: 'lineup', overlays: 5 },
+            { id: 'torneo-regional', name: 'Torneo Regional 2026 - Marcador', type: 'scoreboard', overlays: 3 },
+            { id: 'liga-pro', name: 'Liga Pro eSports - Alineaciones', type: 'lineup', overlays: 3 },
+            { id: 'ad-publicidad', name: 'Publicidad & Auspiciadores', type: 'publicidad', overlays: 1 },
           ]);
         }
       })
       .catch(e => {
         console.error(e);
         setProjects([
-          { id: 'torneo-regional', name: 'Torneo Regional 2026', type: 'scoreboard', overlays: 3 },
-          { id: 'liga-pro', name: 'Liga Pro eSports', type: 'lineup', overlays: 5 },
+          { id: 'torneo-regional', name: 'Torneo Regional 2026 - Marcador', type: 'scoreboard', overlays: 3 },
+          { id: 'liga-pro', name: 'Liga Pro eSports - Alineaciones', type: 'lineup', overlays: 3 },
+          { id: 'ad-publicidad', name: 'Publicidad & Auspiciadores', type: 'publicidad', overlays: 1 },
         ]);
       });
   }, []);

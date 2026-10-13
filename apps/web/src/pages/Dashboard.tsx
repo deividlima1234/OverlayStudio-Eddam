@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LayoutTemplate, PlusCircle, MonitorPlay, Settings, Copy, X, Check, Trash2, AlertTriangle } from 'lucide-react';
+import { LayoutTemplate, PlusCircle, MonitorPlay, Settings, Copy, X, Check, Trash2, AlertTriangle, CheckCircle2, AlertCircle } from 'lucide-react';
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -53,6 +53,14 @@ export default function Dashboard() {
   const [copied, setCopied] = useState(false);
   const [deleteProj, setDeleteProj] = useState<any>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+  const showToast = (message: string, type: 'success' | 'error' = 'success') => {
+    setToast({ type, message });
+    setTimeout(() => {
+      setToast(curr => (curr?.message === message ? null : curr));
+    }, 4000);
+  };
 
   const openModal = (e: React.MouseEvent, proj: any) => {
     e.stopPropagation();
@@ -66,21 +74,25 @@ export default function Dashboard() {
     if (modalProject) {
       const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
       try {
-        await fetch(`${API_URL}/api/overlays/${editId}`, {
+        const res = await fetch(`${API_URL}/api/overlays/${editId}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ name: editName, type: modalProject.type, settings: modalProject.settings })
         });
         
-        // Si el ID cambió, podríamos eliminar el viejo, pero para mantenerlo simple y seguro 
-        // solo actualizaremos si el ID es el mismo, de lo contrario se crea un duplicado (intencionado según advertencia)
+        if (!res.ok) {
+          throw new Error(`Código ${res.status}`);
+        }
+
         if (editId !== modalProject.id) {
            setProjects(prev => [...prev.filter(p => p.id !== modalProject.id), { ...modalProject, id: editId, name: editName }]);
         } else {
            setProjects(prev => prev.map(p => p.id === modalProject.id ? { ...p, name: editName } : p));
         }
-      } catch (e) {
+        showToast('Configuración del proyecto guardada con éxito.', 'success');
+      } catch (e: any) {
         console.error(e);
+        showToast(`Error al guardar configuración: ${e.message || 'Error de conexión'}`, 'error');
       }
     }
     setModalProject(null);
@@ -90,18 +102,18 @@ export default function Dashboard() {
     if (!deleteProj || isDeleting) return;
     setIsDeleting(true);
     const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+    const projNameToDelete = deleteProj.name;
     try {
       const res = await fetch(`${API_URL}/api/overlays/${deleteProj.id}`, { method: 'DELETE' });
       if (!res.ok) {
-        console.error('Error al eliminar overlay del servidor:', res.status, res.statusText);
+        throw new Error(`Código ${res.status}`);
       }
       setProjects(prev => prev.filter(p => p.id !== deleteProj.id));
       setDeleteProj(null);
-    } catch(e) {
-      console.error('Error de red al eliminar overlay:', e);
-      // Remueve de la UI para que no quede bloqueada si hay problemas de red o es proyecto local
-      setProjects(prev => prev.filter(p => p.id !== deleteProj.id));
-      setDeleteProj(null);
+      showToast(`Proyecto "${projNameToDelete}" eliminado con éxito.`, 'success');
+    } catch(e: any) {
+      console.error('Error al eliminar overlay:', e);
+      showToast(`Error al eliminar "${projNameToDelete}": ${e.message || 'No se pudo conectar con el servidor'}`, 'error');
     } finally {
       setIsDeleting(false);
     }
@@ -281,6 +293,30 @@ export default function Dashboard() {
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Toast de Notificación */}
+      {toast && (
+        <div 
+          className={`fixed bottom-6 right-6 z-[70] flex items-center gap-3 px-5 py-4 rounded-xl shadow-2xl border backdrop-blur-md animate-slide-up transition-all ${
+            toast.type === 'success' 
+              ? 'bg-emerald-950/90 border-emerald-500/50 text-emerald-100 shadow-emerald-900/20' 
+              : 'bg-red-950/90 border-red-500/50 text-red-100 shadow-red-900/20'
+          }`}
+        >
+          {toast.type === 'success' ? (
+            <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+          ) : (
+            <AlertCircle className="w-5 h-5 text-red-400 shrink-0" />
+          )}
+          <span className="text-sm font-medium">{toast.message}</span>
+          <button 
+            onClick={() => setToast(null)} 
+            className="ml-2 p-1 hover:bg-white/10 rounded-lg transition-colors text-white/70 hover:text-white"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
       )}
     </div>

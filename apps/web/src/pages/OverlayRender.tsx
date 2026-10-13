@@ -8,6 +8,7 @@ import AdOverlay from '../components/AdOverlay';
 import SponsorOverlay from '../components/SponsorOverlay';
 import TickerOverlay from '../components/TickerOverlay';
 import PopupOverlay from '../components/PopupOverlay';
+import CustomOverlay from '../components/CustomOverlay';
 
 export default function OverlayRender() {
   const { id } = useParams<{ id: string }>();
@@ -72,7 +73,9 @@ export default function OverlayRender() {
         </div>
       )}
 
-      {id?.startsWith('ad-') ? (
+      {state.overlayType === 'custom' || Boolean(state.customCode) ? (
+        <CustomOverlay />
+      ) : (id?.startsWith('ad-') || state.overlayType === 'publicidad') ? (
         <>
           <AdOverlay />
           <SponsorOverlay />
@@ -81,7 +84,7 @@ export default function OverlayRender() {
         </>
       ) : (
         <>
-          {id === 'liga-pro' ? <Lineup /> : <Scoreboard />}
+          {(id === 'liga-pro' || state.overlayType === 'lineup') ? <Lineup /> : <Scoreboard />}
           <ReplayOverlay />
         </>
       )}

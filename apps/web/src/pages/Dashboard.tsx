@@ -1,6 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LayoutTemplate, PlusCircle, MonitorPlay, Settings, Copy, X, Check, Trash2, AlertTriangle, CheckCircle2, AlertCircle } from 'lucide-react';
+import { 
+  LayoutTemplate, 
+  PlusCircle, 
+  MonitorPlay, 
+  Settings, 
+  Copy, 
+  X, 
+  Check, 
+  Trash2, 
+  AlertTriangle, 
+  CheckCircle2, 
+  AlertCircle,
+  Code2,
+  Megaphone,
+  Trophy,
+  Users,
+  Sparkles,
+  FileCode
+} from 'lucide-react';
+import { OVERLAY_STARTER_TEMPLATES, generateAIPrompt } from '../templates/overlayTemplates';
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -15,7 +34,7 @@ export default function Dashboard() {
       .then(data => {
         if (data && data.length > 0) {
           // Mapeamos los datos de la DB para la UI
-          setProjects(data.map((p: any) => ({ ...p, overlays: p.type === 'publicidad' ? 1 : 3 })));
+          setProjects(data.map((p: any) => ({ ...p, overlays: p.type === 'publicidad' || p.type === 'custom' ? 1 : 3 })));
         } else {
           // Datos por defecto si la DB está vacía
           setProjects([
@@ -35,18 +54,127 @@ export default function Dashboard() {
       });
   }, []);
 
-  const createNewProject = async () => {
-    const id = 'ad-' + Math.random().toString(36).substring(7);
-    const newProj = { name: 'Sponsors & Publicidad', type: 'publicidad', settings: {} };
+  // Modal de Creación de Proyecto
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [newProjectName, setNewProjectName] = useState('');
+  const [newProjectId, setNewProjectId] = useState('');
+  const [newProjectType, setNewProjectType] = useState<'custom' | 'publicidad' | 'scoreboard' | 'lineup'>('custom');
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>('reportaje');
+  const [customCodeInput, setCustomCodeInput] = useState<string>(
+    OVERLAY_STARTER_TEMPLATES.find(t => t.id === 'reportaje')?.code || OVERLAY_STARTER_TEMPLATES[0].code
+  );
+  const [activeCodeTab, setActiveCodeTab] = useState<'code' | 'prompt'>('code');
+  const [promptTopic, setPromptTopic] = useState('transmisión de un reportaje en vivo');
+  const [promptCopied, setPromptCopied] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
+
+  const slugify = (text: string) => {
+    return text
+      .toLowerCase()
+      .trim()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+  };
+
+  const handleNameChange = (val: string) => {
+    setNewProjectName(val);
+    setNewProjectId(slugify(val));
+  };
+
+  const openCreateModal = (type: 'custom' | 'publicidad' = 'custom') => {
+    setNewProjectType(type);
+    if (type === 'publicidad') {
+      const defaultName = 'Publicidad & Auspiciadores ' + (projects.filter(p => p.type === 'publicidad').length + 1);
+      setNewProjectName(defaultName);
+      setNewProjectId(slugify(defaultName));
+    } else {
+      setNewProjectName('');
+      setNewProjectId('');
+      setSelectedTemplateId('reportaje');
+      setCustomCodeInput(OVERLAY_STARTER_TEMPLATES.find(t => t.id === 'reportaje')?.code || OVERLAY_STARTER_TEMPLATES[0].code);
+    }
+    setActiveCodeTab('code');
+    setIsCreateOpen(true);
+  };
+
+  const handleSelectTemplate = (templateId: string) => {
+    setSelectedTemplateId(templateId);
+    const tmpl = OVERLAY_STARTER_TEMPLATES.find(t => t.id === templateId);
+    if (tmpl) {
+      setCustomCodeInput(tmpl.code);
+    }
+  };
+
+  const handleCopyPrompt = () => {
+    const text = generateAIPrompt(promptTopic || newProjectName || 'reportaje en vivo');
+    navigator.clipboard.writeText(text);
+    setPromptCopied(true);
+    setTimeout(() => setPromptCopied(false), 2500);
+  };
+
+  const submitCreateProject = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isCreating) return;
+
+    const trimmedName = newProjectName.trim();
+    if (!trimmedName) {
+      showToast('Por favor ingresa un nombre para el proyecto', 'error');
+      return;
+    }
+
+    const finalId = newProjectId.trim() || slugify(trimmedName) || ('proj-' + Math.random().toString(36).substring(7));
     
-    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-    await fetch(`${API_URL}/api/overlays/${id}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(newProj)
-    });
-    
-    navigate(`/editor/${id}`);
+    if (projects.some(p => p.id === finalId)) {
+      showToast(`Ya existe un proyecto con el ID "${finalId}". Elige otro ID único.`, 'error');
+      return;
+    }
+
+    setIsCreating(true);
+    try {
+      let initialSettings: any = { isVisible: true };
+
+      if (newProjectType === 'custom') {
+        initialSettings = {
+          isVisible: true,
+          customCode: customCodeInput,
+          customTemplate: selectedTemplateId
+        };
+      } else if (newProjectType === 'publicidad') {
+        initialSettings = {
+          isVisible: true,
+          isAdVisible: true,
+          isSponsorVisible: true,
+          isTickerVisible: true,
+          isPopupVisible: true
+        };
+      }
+
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+      const res = await fetch(`${API_URL}/api/overlays/${finalId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: trimmedName,
+          type: newProjectType,
+          settings: initialSettings
+        })
+      });
+
+      if (!res.ok) {
+        throw new Error(`Código ${res.status}`);
+      }
+
+      setIsCreateOpen(false);
+      showToast(`Proyecto "${trimmedName}" creado con éxito.`, 'success');
+      navigate(`/editor/${finalId}`);
+    } catch (err: any) {
+      console.error('Error al crear proyecto:', err);
+      showToast(`Error al crear proyecto: ${err.message || 'Error de conexión'}`, 'error');
+    } finally {
+      setIsCreating(false);
+    }
   };
 
   const [modalProject, setModalProject] = useState<any>(null);
@@ -130,6 +258,36 @@ export default function Dashboard() {
     }
   };
 
+  const getProjectTypeBadge = (type: string) => {
+    switch (type) {
+      case 'custom':
+        return (
+          <span className="bg-primary/20 text-primary border border-primary/30 px-2 py-0.5 rounded text-[10px] sm:text-[11px] font-bold inline-flex items-center gap-1">
+            <Code2 className="w-3 h-3" /> Código / IA
+          </span>
+        );
+      case 'publicidad':
+        return (
+          <span className="bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded text-[10px] sm:text-[11px] font-bold inline-flex items-center gap-1">
+            <Megaphone className="w-3 h-3" /> Publicidad
+          </span>
+        );
+      case 'lineup':
+        return (
+          <span className="bg-blue-500/20 text-blue-300 border border-blue-500/30 px-2 py-0.5 rounded text-[10px] sm:text-[11px] font-bold inline-flex items-center gap-1">
+            <Users className="w-3 h-3" /> Alineación
+          </span>
+        );
+      case 'scoreboard':
+      default:
+        return (
+          <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded text-[10px] sm:text-[11px] font-bold inline-flex items-center gap-1">
+            <Trophy className="w-3 h-3" /> Marcador
+          </span>
+        );
+    }
+  };
+
   return (
     <div className="min-h-screen p-4 sm:p-6 md:p-8 max-w-7xl mx-auto animate-fade-in relative">
       <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 sm:mb-12">
@@ -145,7 +303,7 @@ export default function Dashboard() {
           </div>
         </div>
         <button 
-          onClick={createNewProject} 
+          onClick={() => openCreateModal('custom')} 
           className="btn-primary flex items-center justify-center gap-2 w-full sm:w-auto py-2.5 px-5 text-sm sm:text-base shadow-lg shadow-primary/20"
         >
           <PlusCircle className="w-5 h-5 shrink-0" />
@@ -172,7 +330,7 @@ export default function Dashboard() {
               onClick={() => navigate(`/editor/${proj.id}`)}
             >
               <div>
-                <div className="flex justify-between items-start gap-2 mb-4">
+                <div className="flex justify-between items-start gap-2 mb-3">
                   <h3 className="text-base sm:text-lg font-bold group-hover:text-primary transition-colors line-clamp-2 leading-snug">
                     {proj.name}
                   </h3>
@@ -195,6 +353,9 @@ export default function Dashboard() {
                     </button>
                   </div>
                 </div>
+                <div className="mb-3">
+                  {getProjectTypeBadge(proj.type)}
+                </div>
               </div>
 
               <div className="flex items-center justify-between text-xs sm:text-sm text-textMuted pt-3 mt-2 border-t border-border/60">
@@ -208,14 +369,311 @@ export default function Dashboard() {
           ))}
           
           <div 
-            onClick={createNewProject} 
-            className="card border-dashed border-2 flex flex-col items-center justify-center text-textMuted hover:text-white hover:border-primary cursor-pointer active:scale-[0.99] transition-all min-h-[140px] sm:min-h-[160px] p-6 text-center"
+            onClick={() => openCreateModal('publicidad')} 
+            className="card border-dashed border-2 border-white/20 hover:border-primary flex flex-col items-center justify-center text-textMuted hover:text-white cursor-pointer active:scale-[0.99] transition-all min-h-[140px] sm:min-h-[160px] p-6 text-center group"
           >
-            <PlusCircle className="w-7 h-7 sm:w-8 sm:h-8 mb-2 opacity-50 group-hover:opacity-100 transition-opacity" />
-            <p className="font-medium text-sm sm:text-base">Crear un proyecto de Publicidad</p>
+            <PlusCircle className="w-7 h-7 sm:w-8 sm:h-8 mb-2 opacity-60 group-hover:opacity-100 group-hover:text-primary transition-all group-hover:scale-110" />
+            <p className="font-semibold text-sm sm:text-base text-white">Crear un proyecto de Publicidad</p>
+            <span className="text-xs text-textMuted mt-1">O crea un overlay con código programable</span>
           </div>
         </div>
       </main>
+
+      {/* Modal de Creación de Proyecto */}
+      {isCreateOpen && (
+        <div 
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-3 sm:p-4 animate-fade-in"
+          onClick={() => !isCreating && setIsCreateOpen(false)}
+        >
+          <div 
+            className="bg-surface border border-white/10 rounded-2xl p-5 sm:p-7 w-full max-w-2xl max-h-[92vh] overflow-y-auto shadow-2xl space-y-5"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Header del Modal */}
+            <div className="flex justify-between items-center pb-4 border-b border-white/10">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-primary/20 border border-primary/30 flex items-center justify-center text-primary">
+                  <PlusCircle className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="text-lg sm:text-xl font-bold text-white tracking-tight">Crear Nuevo Proyecto</h3>
+                  <p className="text-xs text-textMuted">Configura los datos del overlay para tu transmisión</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => !isCreating && setIsCreateOpen(false)} 
+                className="text-textMuted hover:text-white transition-colors p-1.5 hover:bg-white/10 rounded-lg shrink-0"
+                aria-label="Cerrar modal"
+              >
+                <X className="w-5 h-5 sm:w-6 sm:h-6"/>
+              </button>
+            </div>
+
+            <form onSubmit={submitCreateProject} className="space-y-5">
+              {/* Nombre e ID */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs sm:text-sm font-bold text-textMuted mb-1.5">
+                    Nombre del Proyecto <span className="text-red-400">*</span>
+                  </label>
+                  <input 
+                    type="text" 
+                    required
+                    autoFocus
+                    className="w-full bg-background border border-white/10 rounded-lg p-3 text-white text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-colors"
+                    value={newProjectName}
+                    onChange={(e) => handleNameChange(e.target.value)}
+                    placeholder="Ej: Reportaje En Vivo - Elecciones"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs sm:text-sm font-bold text-textMuted mb-1.5">
+                    ID / Enlace OBS (Slug único)
+                  </label>
+                  <div className="flex items-center bg-background border border-white/10 rounded-lg overflow-hidden focus-within:border-primary">
+                    <span className="px-2.5 py-3 text-xs text-textMuted/70 bg-black/40 border-r border-white/5 font-mono select-none">
+                      /render/
+                    </span>
+                    <input 
+                      type="text" 
+                      className="flex-1 bg-transparent px-3 py-3 text-white text-xs sm:text-sm font-mono outline-none"
+                      value={newProjectId}
+                      onChange={(e) => setNewProjectId(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-'))}
+                      placeholder="reportaje-en-vivo"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Selector de Tipo de Proyecto */}
+              <div>
+                <label className="block text-xs sm:text-sm font-bold text-textMuted mb-2">
+                  Tipo de Proyecto
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <div 
+                    onClick={() => setNewProjectType('custom')}
+                    className={`p-3.5 rounded-xl border cursor-pointer transition-all flex items-start gap-3 ${
+                      newProjectType === 'custom' 
+                        ? 'bg-primary/15 border-primary shadow-lg shadow-primary/10' 
+                        : 'bg-surfaceHover/50 border-white/5 hover:border-white/20'
+                    }`}
+                  >
+                    <div className={`p-2 rounded-lg shrink-0 ${newProjectType === 'custom' ? 'bg-primary text-black' : 'bg-white/10 text-white'}`}>
+                      <Code2 className="w-5 h-5" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-1">
+                        <span className="text-sm font-bold text-white">Código / IA (Programable)</span>
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-primary/20 text-primary border border-primary/30">
+                          Recomendado
+                        </span>
+                      </div>
+                      <p className="text-xs text-textMuted mt-0.5 leading-snug">
+                        Programa tu overlay con HTML/Tailwind/JS o ayúdate de una IA externa.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div 
+                    onClick={() => setNewProjectType('publicidad')}
+                    className={`p-3.5 rounded-xl border cursor-pointer transition-all flex items-start gap-3 ${
+                      newProjectType === 'publicidad' 
+                        ? 'bg-amber-500/15 border-amber-500 shadow-lg shadow-amber-500/10' 
+                        : 'bg-surfaceHover/50 border-white/5 hover:border-white/20'
+                    }`}
+                  >
+                    <div className={`p-2 rounded-lg shrink-0 ${newProjectType === 'publicidad' ? 'bg-amber-500 text-black' : 'bg-white/10 text-white'}`}>
+                      <Megaphone className="w-5 h-5" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <span className="text-sm font-bold text-white">Publicidad & Auspiciadores</span>
+                      <p className="text-xs text-textMuted mt-0.5 leading-snug">
+                        Banners rotativos, sello flotante, ticker de noticias y popups.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div 
+                    onClick={() => setNewProjectType('scoreboard')}
+                    className={`p-3.5 rounded-xl border cursor-pointer transition-all flex items-start gap-3 ${
+                      newProjectType === 'scoreboard' 
+                        ? 'bg-emerald-500/15 border-emerald-500 shadow-lg shadow-emerald-500/10' 
+                        : 'bg-surfaceHover/50 border-white/5 hover:border-white/20'
+                    }`}
+                  >
+                    <div className={`p-2 rounded-lg shrink-0 ${newProjectType === 'scoreboard' ? 'bg-emerald-500 text-black' : 'bg-white/10 text-white'}`}>
+                      <Trophy className="w-5 h-5" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <span className="text-sm font-bold text-white">Marcador Deportivo</span>
+                      <p className="text-xs text-textMuted mt-0.5 leading-snug">
+                        Marcador de fútbol con goles, cronómetro y animación ¡GOOOL!
+                      </p>
+                    </div>
+                  </div>
+
+                  <div 
+                    onClick={() => setNewProjectType('lineup')}
+                    className={`p-3.5 rounded-xl border cursor-pointer transition-all flex items-start gap-3 ${
+                      newProjectType === 'lineup' 
+                        ? 'bg-blue-500/15 border-blue-500 shadow-lg shadow-blue-500/10' 
+                        : 'bg-surfaceHover/50 border-white/5 hover:border-white/20'
+                    }`}
+                  >
+                    <div className={`p-2 rounded-lg shrink-0 ${newProjectType === 'lineup' ? 'bg-blue-500 text-black' : 'bg-white/10 text-white'}`}>
+                      <Users className="w-5 h-5" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <span className="text-sm font-bold text-white">Alineación Táctica</span>
+                      <p className="text-xs text-textMuted mt-0.5 leading-snug">
+                        Esquema táctico de cancha para Fútbol 11, 9, 7 o 5 con titulares.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Sección Especial para Tipo 'custom' */}
+              {newProjectType === 'custom' && (
+                <div className="p-4 rounded-xl bg-black/40 border border-white/10 space-y-4">
+                  {/* Selector de Plantillas Iniciales */}
+                  <div>
+                    <label className="block text-xs font-bold text-textMuted uppercase tracking-wider mb-2">
+                      Selecciona una Plantilla Base
+                    </label>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                      {OVERLAY_STARTER_TEMPLATES.map(tmpl => (
+                        <button
+                          key={tmpl.id}
+                          type="button"
+                          onClick={() => handleSelectTemplate(tmpl.id)}
+                          className={`p-2.5 rounded-lg border text-left transition-all ${
+                            selectedTemplateId === tmpl.id 
+                              ? 'bg-primary/20 border-primary text-white shadow-md' 
+                              : 'bg-surface/50 border-white/5 hover:border-white/20 text-textMuted hover:text-white'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between gap-1">
+                            <span className="text-xs font-bold truncate">{tmpl.name}</span>
+                          </div>
+                          <p className="text-[10px] text-textMuted/80 mt-1 line-clamp-1">{tmpl.category}</p>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Pestañas: Código Inicial / Generador de Prompt IA */}
+                  <div className="pt-2 border-t border-white/10">
+                    <div className="flex items-center justify-between mb-2.5">
+                      <div className="flex gap-1 bg-surface p-1 rounded-lg border border-white/5">
+                        <button
+                          type="button"
+                          onClick={() => setActiveCodeTab('code')}
+                          className={`px-3 py-1 text-xs font-bold rounded-md transition-all flex items-center gap-1.5 ${
+                            activeCodeTab === 'code' ? 'bg-primary text-black' : 'text-textMuted hover:text-white'
+                          }`}
+                        >
+                          <FileCode className="w-3.5 h-3.5" /> Código Inicial
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setActiveCodeTab('prompt')}
+                          className={`px-3 py-1 text-xs font-bold rounded-md transition-all flex items-center gap-1.5 ${
+                            activeCodeTab === 'prompt' ? 'bg-primary text-black' : 'text-textMuted hover:text-white'
+                          }`}
+                        >
+                          <Sparkles className="w-3.5 h-3.5" /> Generar con IA
+                        </button>
+                      </div>
+
+                      {activeCodeTab === 'prompt' && (
+                        <button
+                          type="button"
+                          onClick={handleCopyPrompt}
+                          className={`px-3 py-1 text-xs font-bold rounded-md flex items-center gap-1.5 transition-all ${
+                            promptCopied ? 'bg-green-600 text-white' : 'bg-primary/20 text-primary hover:bg-primary hover:text-white'
+                          }`}
+                        >
+                          {promptCopied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                          {promptCopied ? '¡Prompt Copiado!' : 'Copiar Prompt para IA'}
+                        </button>
+                      )}
+                    </div>
+
+                    {activeCodeTab === 'code' ? (
+                      <div>
+                        <textarea 
+                          rows={6}
+                          className="w-full bg-background border border-white/10 rounded-lg p-3 text-white text-xs font-mono outline-none focus:border-primary transition-colors leading-relaxed"
+                          value={customCodeInput}
+                          onChange={(e) => setCustomCodeInput(e.target.value)}
+                          placeholder="Pega o escribe aquí tu código HTML/Tailwind..."
+                        />
+                        <p className="text-[11px] text-textMuted mt-1 flex items-center gap-1">
+                          <span>💡</span> Podrás previsualizar en vivo y compilar este código en el Editor de Studio.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block text-[11px] font-bold text-textMuted mb-1">
+                            ¿De qué trata tu transmisión o evento?
+                          </label>
+                          <input 
+                            type="text" 
+                            className="w-full bg-background border border-white/10 rounded-lg px-3 py-2 text-white text-xs outline-none focus:border-primary"
+                            value={promptTopic}
+                            onChange={(e) => setPromptTopic(e.target.value)}
+                            placeholder="Ej: reportaje de elecciones en vivo, cobertura deportiva, transmisión de misa"
+                          />
+                        </div>
+
+                        <div className="p-3 bg-background rounded-lg border border-white/10 font-mono text-[11px] text-gray-300 max-h-36 overflow-y-auto whitespace-pre-wrap leading-relaxed select-all">
+                          {generateAIPrompt(promptTopic)}
+                        </div>
+                        <p className="text-[11px] text-textMuted">
+                          Copia este prompt, pégalo en ChatGPT, Claude o Gemini, y pega el código resultante en la pestaña "Código Inicial".
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Botones de Acción */}
+              <div className="pt-3 border-t border-white/10 flex flex-col-reverse sm:flex-row justify-end gap-2.5">
+                <button 
+                  type="button"
+                  disabled={isCreating}
+                  onClick={() => setIsCreateOpen(false)} 
+                  className="w-full sm:w-auto px-5 py-2.5 rounded-lg font-bold text-sm text-textMuted hover:bg-white/5 transition-colors disabled:opacity-50"
+                >
+                  Cancelar
+                </button>
+                <button 
+                  type="submit" 
+                  disabled={isCreating}
+                  className="btn-primary w-full sm:w-auto px-6 py-2.5 text-sm flex items-center justify-center gap-2 shadow-lg shadow-primary/20 disabled:opacity-50"
+                >
+                  {isCreating ? (
+                    <>
+                      <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                      <span>Creando Proyecto...</span>
+                    </>
+                  ) : (
+                    <>
+                      <PlusCircle className="w-4 h-4" />
+                      <span>Crear Proyecto y Abrir Editor</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Modal de Configuración */}
       {modalProject && (

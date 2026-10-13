@@ -73,6 +73,12 @@ interface OverlayState {
   // WS
   ws: WebSocket | null;
   
+  // Overlays con Código Personalizado / IA
+  customCode: string;
+  customTemplate: string;
+  customVariables: Record<string, string>;
+  overlayType?: string;
+
   // Acciones
   updateState: (newState: Partial<OverlayState>) => void;
   connectWebSocket: (role: 'studio' | 'renderer', overlayId?: string) => void;
@@ -81,6 +87,11 @@ interface OverlayState {
 }
 
 export const useOverlayStore = create<OverlayState>((set, get) => ({
+  customCode: '',
+  customTemplate: 'reportaje',
+  customVariables: {},
+  overlayType: 'scoreboard',
+
   homeName: 'RMD',
   awayName: 'FCB',
   homeScore: 0,
@@ -161,9 +172,12 @@ export const useOverlayStore = create<OverlayState>((set, get) => ({
       const res = await fetch(`${baseUrl}/api/overlays/${overlayId}`);
       if (res.ok) {
         const data = await res.json();
-        if (data.settings) {
-          set((state) => ({ ...state, ...data.settings }));
-        }
+        const detectedType = data.type || (overlayId.startsWith('ad-') ? 'publicidad' : overlayId === 'liga-pro' ? 'lineup' : (data.settings?.customCode ? 'custom' : 'scoreboard'));
+        set((state) => ({ 
+          ...state, 
+          overlayType: detectedType,
+          ...(data.settings || {}) 
+        }));
       }
     } catch (e) {
       console.error('Error al cargar overlay:', e);

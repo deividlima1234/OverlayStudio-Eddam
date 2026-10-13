@@ -1,6 +1,30 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Save, Plus, Minus, Trophy, Link as LinkIcon, Settings, Play, Square, RotateCcw, ChevronDown, ChevronUp, Image as ImageIcon, Eye, EyeOff } from 'lucide-react';
+import { 
+  ArrowLeft, 
+  Save, 
+  Plus, 
+  Minus, 
+  Trophy, 
+  Link as LinkIcon, 
+  Settings, 
+  Play, 
+  Square, 
+  RotateCcw, 
+  ChevronDown, 
+  ChevronUp, 
+  Image as ImageIcon, 
+  Eye, 
+  EyeOff,
+  Code2,
+  Sparkles,
+  Copy,
+  Check,
+  CheckCircle2,
+  AlertCircle,
+  RefreshCw,
+  X
+} from 'lucide-react';
 import { useOverlayStore } from '../store/useOverlayStore';
 import Scoreboard from '../components/Scoreboard';
 import Lineup from '../components/Lineup';
@@ -9,12 +33,35 @@ import AdOverlay from '../components/AdOverlay';
 import SponsorOverlay from '../components/SponsorOverlay';
 import TickerOverlay from '../components/TickerOverlay';
 import PopupOverlay from '../components/PopupOverlay';
+import CustomOverlay from '../components/CustomOverlay';
+import { OVERLAY_STARTER_TEMPLATES, generateAIPrompt } from '../templates/overlayTemplates';
 
 export default function Editor() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const state = useOverlayStore();
-  const [activeTab, setActiveTab] = useState<'controles' | 'personalizar' | 'jugadores'>('controles');
+  const [activeTab, setActiveTab] = useState<'controles' | 'personalizar' | 'jugadores' | 'codigo'>('controles');
+  
+  const isCustomProject = state.overlayType === 'custom' || Boolean(state.customCode);
+
+  const [localCode, setLocalCode] = useState(state.customCode || '');
+  const [isAiModalOpen, setIsAiModalOpen] = useState(false);
+  const [aiTopic, setAiTopic] = useState('transmisión de un reportaje en vivo');
+  const [aiCopied, setAiCopied] = useState(false);
+  const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+  const showToast = (message: string, type: 'success' | 'error' = 'success') => {
+    setToast({ type, message });
+    setTimeout(() => {
+      setToast(curr => (curr?.message === message ? null : curr));
+    }, 4000);
+  };
+
+  useEffect(() => {
+    if (state.customCode) {
+      setLocalCode(state.customCode);
+    }
+  }, [state.customCode]);
   
   const [openSection, setOpenSection] = useState<'home' | 'away' | null>('home');
 
@@ -90,6 +137,34 @@ export default function Editor() {
   };
 
   const [isSaving, setIsSaving] = useState(false);
+
+  const handleCompile = () => {
+    updateField('customCode', localCode);
+    showToast('Overlay compilado y transmitido con éxito.', 'success');
+  };
+
+  const handleVariableChange = (key: string, value: string) => {
+    const updated = { ...(state.customVariables || {}), [key]: value };
+    updateField('customVariables', updated);
+  };
+
+  const handleSelectTemplate = (tmplId: string) => {
+    const tmpl = OVERLAY_STARTER_TEMPLATES.find(t => t.id === tmplId);
+    if (tmpl) {
+      setLocalCode(tmpl.code);
+      updateField('customCode', tmpl.code);
+      updateField('customTemplate', tmpl.id);
+      showToast(`Plantilla "${tmpl.name}" cargada.`, 'success');
+    }
+  };
+
+  const handleCopyAiPrompt = () => {
+    const text = generateAIPrompt(aiTopic || 'reportaje en vivo');
+    navigator.clipboard.writeText(text);
+    setAiCopied(true);
+    setTimeout(() => setAiCopied(false), 2500);
+  };
+
   const handleSave = async () => {
     setIsSaving(true);
     try {
@@ -100,8 +175,13 @@ export default function Editor() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          type: state.overlayType,
           settings: {
             isVisible: state.isVisible,
+            customCode: localCode || state.customCode,
+            customTemplate: state.customTemplate,
+            customVariables: state.customVariables,
+
             homeName: state.homeName,
             awayName: state.awayName,
             homeScore: state.homeScore,
@@ -156,10 +236,10 @@ export default function Editor() {
       });
 
       if (!response.ok) throw new Error('Error al guardar');
-      alert('¡Overlay guardado correctamente en la Base de Datos!');
-    } catch (error) {
+      showToast('¡Overlay guardado correctamente en la Base de Datos!', 'success');
+    } catch (error: any) {
       console.error(error);
-      alert('Hubo un error al guardar en la base de datos.');
+      showToast('Hubo un error al guardar en la base de datos.', 'error');
     } finally {
       setIsSaving(false);
     }
@@ -189,19 +269,30 @@ export default function Editor() {
           >
             Controles
           </button>
-          <button 
-            className={`flex-1 py-3 text-sm font-semibold transition-colors flex items-center justify-center gap-2 ${activeTab === 'personalizar' ? 'text-primary border-b-2 border-primary' : 'text-textMuted hover:text-white'}`}
-            onClick={() => setActiveTab('personalizar')}
-          >
-            <Settings className="w-4 h-4" /> Personalizar
-          </button>
-          {id === 'liga-pro' && (
+          {isCustomProject ? (
             <button 
-              className={`flex-1 py-3 text-sm font-semibold transition-colors flex items-center justify-center gap-2 ${activeTab === 'jugadores' ? 'text-primary border-b-2 border-primary' : 'text-textMuted hover:text-white'}`}
-              onClick={() => setActiveTab('jugadores')}
+              className={`flex-1 py-3 text-sm font-semibold transition-colors flex items-center justify-center gap-2 ${activeTab === 'codigo' ? 'text-primary border-b-2 border-primary' : 'text-textMuted hover:text-white'}`}
+              onClick={() => setActiveTab('codigo')}
             >
-              Jugadores
+              <Code2 className="w-4 h-4" /> Código / IA
             </button>
+          ) : (
+            <>
+              <button 
+                className={`flex-1 py-3 text-sm font-semibold transition-colors flex items-center justify-center gap-2 ${activeTab === 'personalizar' ? 'text-primary border-b-2 border-primary' : 'text-textMuted hover:text-white'}`}
+                onClick={() => setActiveTab('personalizar')}
+              >
+                <Settings className="w-4 h-4" /> Personalizar
+              </button>
+              {id === 'liga-pro' && (
+                <button 
+                  className={`flex-1 py-3 text-sm font-semibold transition-colors flex items-center justify-center gap-2 ${activeTab === 'jugadores' ? 'text-primary border-b-2 border-primary' : 'text-textMuted hover:text-white'}`}
+                  onClick={() => setActiveTab('jugadores')}
+                >
+                  Jugadores
+                </button>
+              )}
+            </>
           )}
         </div>
         
@@ -212,10 +303,10 @@ export default function Editor() {
               <section className="card p-5 bg-surfaceHover border-white/5 shadow-md flex items-center justify-between">
                 <div>
                   <h3 className="text-xs font-bold uppercase tracking-wider text-textMuted mb-1">
-                    {id?.startsWith('ad-') ? 'Estado de la Publicidad' : 'Estado del Marcador'}
+                    {isCustomProject ? 'Estado del Overlay (Master)' : id?.startsWith('ad-') ? 'Estado de la Publicidad' : 'Estado del Marcador'}
                   </h3>
                   <p className="text-xs text-textMuted/70">
-                    {id?.startsWith('ad-') ? 'Oculta la publicidad en vivo.' : 'Oculta para cambiar equipos sin que se vea en vivo.'}
+                    {isCustomProject ? 'Oculta o muestra el gráfico en la señal en vivo de OBS.' : id?.startsWith('ad-') ? 'Oculta la publicidad en vivo.' : 'Oculta para cambiar equipos sin que se vea en vivo.'}
                   </p>
                 </div>
                 <button 
@@ -229,6 +320,98 @@ export default function Editor() {
                   {state.isVisible ? <><EyeOff className="w-5 h-5"/> Ocultar MASTER</> : <><Eye className="w-5 h-5"/> Mostrar MASTER</>}
                 </button>
               </section>
+
+              {/* Si es proyecto de código personalizado, mostrar controles rápidos de variables */}
+              {isCustomProject && (
+                <>
+                  <section className="card p-5 bg-surfaceHover border-white/5 shadow-md space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-2">
+                        <Sparkles className="w-4 h-4" /> Textos en Vivo (Variables)
+                      </h3>
+                      <span className="text-[10px] text-emerald-400 font-semibold bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                        Sincronización WebSocket
+                      </span>
+                    </div>
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-xs font-bold text-textMuted mb-1">Titular Principal (eddam-title)</label>
+                        <input 
+                          type="text" 
+                          className="w-full bg-background border border-white/10 rounded-lg p-2.5 text-white text-sm focus:border-primary outline-none transition-colors"
+                          value={state.customVariables?.['eddam-title'] ?? ''}
+                          onChange={(e) => handleVariableChange('eddam-title', e.target.value)}
+                          placeholder="Ej: INFORME ESPECIAL: TRANSMISIÓN EN DIRECTO"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-textMuted mb-1">Ubicación / Evento (eddam-location)</label>
+                        <input 
+                          type="text" 
+                          className="w-full bg-background border border-white/10 rounded-lg p-2.5 text-white text-sm focus:border-primary outline-none transition-colors"
+                          value={state.customVariables?.['eddam-location'] ?? state.customVariables?.['eddam-event'] ?? ''}
+                          onChange={(e) => {
+                            handleVariableChange('eddam-location', e.target.value);
+                            handleVariableChange('eddam-event', e.target.value);
+                          }}
+                          placeholder="Ej: 📍 QUITO, ECUADOR o CUMBRE DIGITAL"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2.5">
+                        <div>
+                          <label className="block text-xs font-bold text-textMuted mb-1">Reportero / Ponente (eddam-author)</label>
+                          <input 
+                            type="text" 
+                            className="w-full bg-background border border-white/10 rounded-lg p-2.5 text-white text-sm focus:border-primary outline-none transition-colors"
+                            value={state.customVariables?.['eddam-author'] ?? state.customVariables?.['eddam-speaker'] ?? ''}
+                            onChange={(e) => {
+                              handleVariableChange('eddam-author', e.target.value);
+                              handleVariableChange('eddam-speaker', e.target.value);
+                            }}
+                            placeholder="Ej: Juan Carlos Pérez"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-bold text-textMuted mb-1">Rol / Cargo (eddam-role)</label>
+                          <input 
+                            type="text" 
+                            className="w-full bg-background border border-white/10 rounded-lg p-2.5 text-white text-sm focus:border-primary outline-none transition-colors"
+                            value={state.customVariables?.['eddam-role'] ?? ''}
+                            onChange={(e) => handleVariableChange('eddam-role', e.target.value)}
+                            placeholder="Ej: Corresponsal"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-textMuted mb-1">Cintillo / Alerta (eddam-headline)</label>
+                        <input 
+                          type="text" 
+                          className="w-full bg-background border border-white/10 rounded-lg p-2.5 text-white text-sm focus:border-primary outline-none transition-colors"
+                          value={state.customVariables?.['eddam-headline'] ?? ''}
+                          onChange={(e) => handleVariableChange('eddam-headline', e.target.value)}
+                          placeholder="Ej: COMUNICADO OFICIAL: RESOLUCIONES EN TIEMPO REAL"
+                        />
+                      </div>
+                    </div>
+                  </section>
+
+                  <section className="card p-5 bg-surfaceHover border-white/5 shadow-md flex items-center justify-between">
+                    <div>
+                      <h4 className="text-xs font-bold text-white uppercase tracking-wider">Editor de Código</h4>
+                      <p className="text-xs text-textMuted mt-0.5">Modifica el HTML/Tailwind o usa el asistente de IA</p>
+                    </div>
+                    <button
+                      onClick={() => setActiveTab('codigo')}
+                      className="px-3 py-1.5 rounded-lg bg-primary/20 hover:bg-primary text-primary hover:text-black font-bold text-xs flex items-center gap-1.5 transition-all"
+                    >
+                      <Code2 className="w-3.5 h-3.5" /> Abrir Editor
+                    </button>
+                  </section>
+                </>
+              )}
 
               {/* CONTROLES DE PUBLICIDAD */}
               {id?.startsWith('ad-') && (
@@ -796,6 +979,78 @@ export default function Editor() {
               </div>
             </div>
           ) : null}
+
+          {activeTab === 'codigo' ? (
+            <div className="space-y-4">
+              {/* Barra superior de herramientas de código */}
+              <div className="flex items-center justify-between gap-2">
+                <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-primary/20 text-primary border border-primary/30 flex items-center gap-1.5">
+                  <Code2 className="w-3.5 h-3.5" /> HTML + Tailwind CSS
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setIsAiModalOpen(true)}
+                  className="px-3 py-1.5 rounded-lg bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 border border-indigo-500/30 font-bold text-xs flex items-center gap-1.5 transition-all shadow-sm"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-indigo-400" /> Asistente IA
+                </button>
+              </div>
+
+              {/* Selector de Plantillas Rápidas */}
+              <div className="card p-3.5 bg-surfaceHover border-white/5 shadow-sm space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-textMuted uppercase tracking-wider">
+                    Cargar Plantilla Base
+                  </span>
+                  <span className="text-[10px] text-textMuted/70">Reemplaza el código</span>
+                </div>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {OVERLAY_STARTER_TEMPLATES.map(tmpl => (
+                    <button
+                      key={tmpl.id}
+                      type="button"
+                      onClick={() => handleSelectTemplate(tmpl.id)}
+                      className={`p-2 rounded-lg text-left border transition-all text-xs ${
+                        state.customTemplate === tmpl.id
+                          ? 'bg-primary/20 border-primary text-white font-bold'
+                          : 'bg-background/50 hover:bg-white/10 border-white/5 text-textMuted hover:text-white'
+                      }`}
+                    >
+                      <span className="font-bold truncate block">{tmpl.name}</span>
+                      <span className="text-[9px] opacity-75">{tmpl.badge}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Editor Textarea */}
+              <div className="relative">
+                <textarea 
+                  rows={15}
+                  spellCheck={false}
+                  className="w-full bg-black/90 border border-white/15 rounded-xl p-3.5 text-emerald-300 font-mono text-xs outline-none focus:border-primary transition-all leading-relaxed shadow-inner"
+                  value={localCode}
+                  onChange={(e) => setLocalCode(e.target.value)}
+                  placeholder="Escribe o pega aquí el código HTML/Tailwind de tu overlay..."
+                />
+              </div>
+
+              {/* Botón de Compilar Overlay */}
+              <div className="flex items-center gap-2.5 pt-1">
+                <button
+                  type="button"
+                  onClick={handleCompile}
+                  className="btn-primary flex-1 py-3 text-sm flex items-center justify-center gap-2 font-bold shadow-lg shadow-primary/20"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                  <span>Compilar Overlay</span>
+                </button>
+              </div>
+              <p className="text-[11px] text-textMuted text-center">
+                Al pulsar "Compilar Overlay", el diseño se actualizará de inmediato en el Preview y en OBS en vivo.
+              </p>
+            </div>
+          ) : null}
         </div>
       </aside>
 
@@ -827,7 +1082,9 @@ export default function Editor() {
           >
             <span className="absolute top-4 left-4 text-[10px] font-bold px-2 py-1 rounded bg-yellow-500 text-black z-30 uppercase tracking-widest shadow-lg">Preview (Estudio)</span>
             <div className="w-[1920px] h-[1080px] origin-top-left relative" style={{ transform: `scale(${scale})` }}>
-                {id?.startsWith('ad-') ? (
+                {isCustomProject ? (
+                  <CustomOverlay />
+                ) : id?.startsWith('ad-') ? (
                   <>
                     <AdOverlay isPreview />
                     <SponsorOverlay isPreview />
@@ -850,7 +1107,9 @@ export default function Editor() {
           >
             <span className="absolute top-4 left-4 text-[10px] font-bold px-2 py-1 rounded bg-red-600 text-white z-30 uppercase tracking-widest shadow-lg animate-pulse">Live (Programa)</span>
             <div className="w-[1920px] h-[1080px] origin-top-left relative" style={{ transform: `scale(${scale})` }}>
-                {id?.startsWith('ad-') ? (
+                {isCustomProject ? (
+                  <CustomOverlay />
+                ) : id?.startsWith('ad-') ? (
                   <>
                     <AdOverlay />
                     <SponsorOverlay />
@@ -868,6 +1127,101 @@ export default function Editor() {
           
         </div>
       </main>
+
+      {/* Modal Asistente de Prompt para IA */}
+      {isAiModalOpen && (
+        <div 
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in"
+          onClick={() => setIsAiModalOpen(false)}
+        >
+          <div 
+            className="bg-surface border border-white/10 rounded-2xl p-6 w-full max-w-xl max-h-[90vh] overflow-y-auto shadow-2xl space-y-4"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-center pb-3 border-b border-white/10">
+              <h3 className="text-lg font-bold flex items-center gap-2 text-white">
+                <Sparkles className="w-5 h-5 text-indigo-400" />
+                <span>Asistente de Prompt para IA</span>
+              </h3>
+              <button 
+                onClick={() => setIsAiModalOpen(false)}
+                className="text-textMuted hover:text-white p-1 rounded-lg"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-bold text-textMuted mb-1.5">
+                  ¿Para qué transmisión necesitas el overlay?
+                </label>
+                <input 
+                  type="text" 
+                  className="w-full bg-background border border-white/10 rounded-lg p-2.5 text-white text-sm outline-none focus:border-primary"
+                  value={aiTopic}
+                  onChange={(e) => setAiTopic(e.target.value)}
+                  placeholder="Ej: reportaje de elecciones en vivo, transmisión de evento musical, misa"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-textMuted mb-1.5">
+                  Prompt generado con especificaciones técnicas (1920x1080, Tailwind, OBS)
+                </label>
+                <div className="p-3 bg-black/60 rounded-xl border border-white/10 text-xs text-gray-300 font-mono max-h-48 overflow-y-auto whitespace-pre-wrap leading-relaxed select-all">
+                  {generateAIPrompt(aiTopic)}
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-3 border-t border-white/10 flex justify-end gap-2.5">
+              <button
+                type="button"
+                onClick={() => setIsAiModalOpen(false)}
+                className="px-4 py-2 rounded-lg font-bold text-sm text-textMuted hover:bg-white/5"
+              >
+                Cerrar
+              </button>
+              <button
+                type="button"
+                onClick={handleCopyAiPrompt}
+                className={`btn-primary px-5 py-2 text-sm flex items-center gap-2 ${
+                  aiCopied ? 'bg-green-600 hover:bg-green-600' : ''
+                }`}
+              >
+                {aiCopied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                <span>{aiCopied ? '¡Prompt Copiado!' : 'Copiar Prompt para ChatGPT / Claude'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toast Notification */}
+      {toast && (
+        <div 
+          className={`fixed bottom-4 left-4 right-4 sm:left-auto sm:right-6 sm:bottom-6 sm:max-w-md z-[70] flex items-center gap-3 px-4 py-3 sm:px-5 sm:py-4 rounded-xl shadow-2xl border backdrop-blur-md animate-slide-up transition-all ${
+            toast.type === 'success' 
+              ? 'bg-emerald-950/95 border-emerald-500/50 text-emerald-100 shadow-emerald-900/30' 
+              : 'bg-red-950/95 border-red-500/50 text-red-100 shadow-red-900/30'
+          }`}
+        >
+          {toast.type === 'success' ? (
+            <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+          ) : (
+            <AlertCircle className="w-5 h-5 text-red-400 shrink-0" />
+          )}
+          <span className="text-xs sm:text-sm font-medium flex-1 break-words">{toast.message}</span>
+          <button 
+            onClick={() => setToast(null)} 
+            className="p-1 hover:bg-white/10 rounded-lg transition-colors text-white/70 hover:text-white shrink-0"
+            aria-label="Cerrar notificación"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
     </div>
   );
 }

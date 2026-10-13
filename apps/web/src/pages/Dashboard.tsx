@@ -24,7 +24,13 @@ export default function Dashboard() {
           ]);
         }
       })
-      .catch(e => console.error(e));
+      .catch(e => {
+        console.error(e);
+        setProjects([
+          { id: 'torneo-regional', name: 'Torneo Regional 2026', type: 'scoreboard', overlays: 3 },
+          { id: 'liga-pro', name: 'Liga Pro eSports', type: 'lineup', overlays: 5 },
+        ]);
+      });
   }, []);
 
   const createNewProject = async () => {
@@ -46,6 +52,7 @@ export default function Dashboard() {
   const [editId, setEditId] = useState('');
   const [copied, setCopied] = useState(false);
   const [deleteProj, setDeleteProj] = useState<any>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const openModal = (e: React.MouseEvent, proj: any) => {
     e.stopPropagation();
@@ -68,9 +75,9 @@ export default function Dashboard() {
         // Si el ID cambió, podríamos eliminar el viejo, pero para mantenerlo simple y seguro 
         // solo actualizaremos si el ID es el mismo, de lo contrario se crea un duplicado (intencionado según advertencia)
         if (editId !== modalProject.id) {
-           setProjects([...projects.filter(p => p.id !== modalProject.id), { ...modalProject, id: editId, name: editName }]);
+           setProjects(prev => [...prev.filter(p => p.id !== modalProject.id), { ...modalProject, id: editId, name: editName }]);
         } else {
-           setProjects(projects.map(p => p.id === modalProject.id ? { ...p, name: editName } : p));
+           setProjects(prev => prev.map(p => p.id === modalProject.id ? { ...p, name: editName } : p));
         }
       } catch (e) {
         console.error(e);
@@ -80,14 +87,23 @@ export default function Dashboard() {
   };
 
   const handleDelete = async () => {
-    if (!deleteProj) return;
+    if (!deleteProj || isDeleting) return;
+    setIsDeleting(true);
     const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
     try {
-      await fetch(`${API_URL}/api/overlays/${deleteProj.id}`, { method: 'DELETE' });
-      setProjects(projects.filter(p => p.id !== deleteProj.id));
+      const res = await fetch(`${API_URL}/api/overlays/${deleteProj.id}`, { method: 'DELETE' });
+      if (!res.ok) {
+        console.error('Error al eliminar overlay del servidor:', res.status, res.statusText);
+      }
+      setProjects(prev => prev.filter(p => p.id !== deleteProj.id));
       setDeleteProj(null);
     } catch(e) {
-      console.error(e);
+      console.error('Error de red al eliminar overlay:', e);
+      // Remueve de la UI para que no quede bloqueada si hay problemas de red o es proyecto local
+      setProjects(prev => prev.filter(p => p.id !== deleteProj.id));
+      setDeleteProj(null);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -233,7 +249,10 @@ export default function Dashboard() {
 
       {/* Modal de Confirmación para Eliminar */}
       {deleteProj && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[60] animate-fade-in" onClick={() => setDeleteProj(null)}>
+        <div 
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[60] animate-fade-in" 
+          onClick={() => !isDeleting && setDeleteProj(null)}
+        >
           <div className="bg-surface border border-red-500/30 rounded-2xl p-6 w-[400px] shadow-2xl" onClick={e => e.stopPropagation()}>
             <div className="flex flex-col items-center text-center gap-4">
               <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center border border-red-500/50">
@@ -247,15 +266,17 @@ export default function Dashboard() {
               <div className="flex gap-3 w-full mt-4">
                 <button 
                   onClick={() => setDeleteProj(null)} 
-                  className="flex-1 py-3 rounded-lg font-bold text-white bg-surfaceHover hover:bg-white/10 transition-colors"
+                  disabled={isDeleting}
+                  className="flex-1 py-3 rounded-lg font-bold text-white bg-surfaceHover hover:bg-white/10 transition-colors disabled:opacity-50"
                 >
                   Cancelar
                 </button>
                 <button 
                   onClick={handleDelete} 
-                  className="flex-1 py-3 rounded-lg font-bold text-white bg-red-600 hover:bg-red-500 transition-colors"
+                  disabled={isDeleting}
+                  className="flex-1 py-3 rounded-lg font-bold text-white bg-red-600 hover:bg-red-500 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                 >
-                  Eliminar
+                  {isDeleting ? 'Eliminando...' : 'Eliminar'}
                 </button>
               </div>
             </div>

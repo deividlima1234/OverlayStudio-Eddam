@@ -11,7 +11,11 @@ const fastify = Fastify({
 });
 
 // Registrar CORS
-fastify.register(cors, { origin: '*' });
+fastify.register(cors, { 
+  origin: '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+});
 
 // Registrar WebSocket
 fastify.register(fastifyWebsocket);

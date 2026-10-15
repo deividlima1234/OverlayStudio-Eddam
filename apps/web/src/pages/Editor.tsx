@@ -23,7 +23,9 @@ import {
   CheckCircle2,
   AlertCircle,
   RefreshCw,
-  X
+  X,
+  Zap,
+  Trash2
 } from 'lucide-react';
 import { useOverlayStore } from '../store/useOverlayStore';
 import Scoreboard from '../components/Scoreboard';
@@ -35,6 +37,11 @@ import TickerOverlay from '../components/TickerOverlay';
 import PopupOverlay from '../components/PopupOverlay';
 import CustomOverlay from '../components/CustomOverlay';
 import { OVERLAY_STARTER_TEMPLATES, generateAIPrompt } from '../templates/overlayTemplates';
+import { 
+  parseOverlayVariables, 
+  extractInitialValues, 
+  type OverlayVariableDef 
+} from '../utils/variableParser';
 
 export default function Editor() {
   const { id } = useParams<{ id: string }>();
@@ -62,9 +69,26 @@ export default function Editor() {
     }, 4000);
   };
 
+  // --- Variables Dinámicas para Overlays ---
+  const [detectedVariables, setDetectedVariables] = useState<OverlayVariableDef[]>(() => {
+    return parseOverlayVariables(state.customCode || '');
+  });
+  const [isAddingField, setIsAddingField] = useState(false);
+  const [newFieldId, setNewFieldId] = useState('');
+  const [newFieldLabel, setNewFieldLabel] = useState('');
+
   useEffect(() => {
     if (state.customCode) {
       setLocalCode(state.customCode);
+      const defs = parseOverlayVariables(state.customCode);
+      if (defs.length > 0) {
+        setDetectedVariables(defs);
+        const initial = extractInitialValues(defs, state.customVariables);
+        const hasMissing = defs.some(d => state.customVariables?.[d.id] === undefined);
+        if (hasMissing) {
+          updateField('customVariables', initial);
+        }
+      }
     }
   }, [state.customCode]);
   
@@ -230,6 +254,12 @@ export default function Editor() {
 
   const handleCompile = () => {
     updateField('customCode', localCode);
+    const defs = parseOverlayVariables(localCode);
+    if (defs.length > 0) {
+      setDetectedVariables(defs);
+      const initial = extractInitialValues(defs, state.customVariables);
+      updateField('customVariables', initial);
+    }
     showToast('Overlay compilado y transmitido con éxito.', 'success');
   };
 
@@ -238,13 +268,68 @@ export default function Editor() {
     updateField('customVariables', updated);
   };
 
+  const handleSyncVariables = () => {
+    const code = localCode || state.customCode || '';
+    const defs = parseOverlayVariables(code);
+    if (defs.length > 0) {
+      setDetectedVariables(defs);
+      const initial = extractInitialValues(defs, state.customVariables);
+      updateField('customVariables', initial);
+      showToast(`¡Se sincronizaron ${defs.length} campos desde el overlay!`, 'success');
+    } else {
+      showToast('No se encontraron variables automáticas en el código.', 'error');
+    }
+  };
+
+  const handleCreateField = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newFieldId.trim()) return;
+    const cleanId = newFieldId.trim().replace(/\s+/g, '-').toLowerCase();
+    const cleanLabel = newFieldLabel.trim() || cleanId;
+
+    if (detectedVariables.some(v => v.id === cleanId)) {
+      showToast(`La variable "${cleanId}" ya existe.`, 'error');
+      return;
+    }
+
+    const newDef: OverlayVariableDef = {
+      id: cleanId,
+      label: cleanLabel,
+      defaultValue: '',
+      type: 'text'
+    };
+
+    setDetectedVariables(prev => [...prev, newDef]);
+    updateField('customVariables', {
+      ...(state.customVariables || {}),
+      [cleanId]: ''
+    });
+
+    setNewFieldId('');
+    setNewFieldLabel('');
+    setIsAddingField(false);
+    showToast(`Campo "${cleanLabel}" añadido con éxito.`, 'success');
+  };
+
+  const handleDeleteField = (idToDelete: string) => {
+    setDetectedVariables(prev => prev.filter(v => v.id !== idToDelete));
+    const updatedVars = { ...(state.customVariables || {}) };
+    delete updatedVars[idToDelete];
+    updateField('customVariables', updatedVars);
+    showToast('Campo eliminado de los controles.', 'success');
+  };
+
   const handleSelectTemplate = (tmplId: string) => {
     const tmpl = OVERLAY_STARTER_TEMPLATES.find(t => t.id === tmplId);
     if (tmpl) {
       setLocalCode(tmpl.code);
       updateField('customCode', tmpl.code);
       updateField('customTemplate', tmpl.id);
-      showToast(`Plantilla "${tmpl.name}" cargada.`, 'success');
+      const defs = parseOverlayVariables(tmpl.code);
+      setDetectedVariables(defs);
+      const initial = extractInitialValues(defs);
+      updateField('customVariables', initial);
+      showToast(`Plantilla "${tmpl.name}" cargada con ${defs.length} variables.`, 'success');
     }
   };
 
@@ -487,8 +572,20 @@ export default function Editor() {
                         <h3 className="text-xs font-bold uppercase tracking-wider text-primary">
                           Textos en Vivo (Variables)
                         </h3>
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-white/10 text-textMuted">
+                          {detectedVariables.length}
+                        </span>
                       </div>
                       <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                        <button
+                          type="button"
+                          onClick={handleSyncVariables}
+                          className="px-2 py-1 rounded bg-white/5 hover:bg-white/15 text-textMuted hover:text-white text-[11px] font-bold flex items-center gap-1 transition-all border border-white/10"
+                          title="Volver a escanear variables desde el HTML"
+                        >
+                          <Zap className="w-3 h-3 text-yellow-400" />
+                          <span className="hidden sm:inline">Escanear</span>
+                        </button>
                         <span className="text-[10px] text-emerald-400 font-semibold bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
                           WebSocket
                         </span>
@@ -504,68 +601,144 @@ export default function Editor() {
                     </div>
 
                     {openSections.variables && (
-                      <div className="p-4 pt-0 border-t border-white/5 space-y-3 mt-1 pt-4">
-                        <div>
-                          <label className="block text-xs font-bold text-textMuted mb-1">Titular Principal (eddam-title)</label>
-                          <input 
-                            type="text" 
-                            className="w-full bg-background border border-white/10 rounded-lg p-2.5 text-white text-sm focus:border-primary outline-none transition-colors"
-                            value={state.customVariables?.['eddam-title'] ?? ''}
-                            onChange={(e) => handleVariableChange('eddam-title', e.target.value)}
-                            placeholder="Ej: INFORME ESPECIAL: TRANSMISIÓN EN DIRECTO"
-                          />
+                      <div className="p-4 pt-0 border-t border-white/5 space-y-4 mt-1 pt-4">
+                        
+                        {/* Barra de Acciones: Sincronizar y Agregar Campo */}
+                        <div className="flex items-center justify-between gap-2 pb-1">
+                          <button
+                            type="button"
+                            onClick={handleSyncVariables}
+                            className="text-[11px] font-bold text-textMuted hover:text-white flex items-center gap-1.5 py-1 px-2 rounded hover:bg-white/5 transition-colors"
+                          >
+                            <Zap className="w-3.5 h-3.5 text-yellow-400" />
+                            <span>Sincronizar desde Código</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => setIsAddingField(!isAddingField)}
+                            className="text-[11px] font-bold text-primary hover:text-primary/80 flex items-center gap-1 py-1 px-2.5 rounded bg-primary/10 hover:bg-primary/20 border border-primary/20 transition-all"
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                            <span>Agregar Campo</span>
+                          </button>
                         </div>
 
-                        <div>
-                          <label className="block text-xs font-bold text-textMuted mb-1">Ubicación / Evento (eddam-location)</label>
-                          <input 
-                            type="text" 
-                            className="w-full bg-background border border-white/10 rounded-lg p-2.5 text-white text-sm focus:border-primary outline-none transition-colors"
-                            value={state.customVariables?.['eddam-location'] ?? state.customVariables?.['eddam-event'] ?? ''}
-                            onChange={(e) => {
-                              handleVariableChange('eddam-location', e.target.value);
-                              handleVariableChange('eddam-event', e.target.value);
-                            }}
-                            placeholder="Ej: 📍 QUITO, ECUADOR o CUMBRE DIGITAL"
-                          />
-                        </div>
+                        {/* Formulario Inline para Crear Nuevo Campo */}
+                        {isAddingField && (
+                          <form 
+                            onSubmit={handleCreateField}
+                            className="p-3 bg-black/60 rounded-xl border border-primary/30 space-y-2.5 animate-slide-up"
+                          >
+                            <div className="flex items-center justify-between text-xs font-bold text-primary">
+                              <span>Nuevo Campo en Vivo</span>
+                              <button 
+                                type="button" 
+                                onClick={() => setIsAddingField(false)}
+                                className="text-textMuted hover:text-white p-0.5"
+                              >
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2">
+                              <div>
+                                <label className="block text-[10px] font-bold text-textMuted uppercase mb-1">
+                                  ID en HTML
+                                </label>
+                                <input
+                                  type="text"
+                                  className="w-full bg-background border border-white/10 rounded-lg p-2 text-white font-mono text-xs focus:border-primary outline-none"
+                                  placeholder="ej: orador-nombre"
+                                  value={newFieldId}
+                                  onChange={(e) => setNewFieldId(e.target.value)}
+                                  autoFocus
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-[10px] font-bold text-textMuted uppercase mb-1">
+                                  Etiqueta Visible
+                                </label>
+                                <input
+                                  type="text"
+                                  className="w-full bg-background border border-white/10 rounded-lg p-2 text-white text-xs focus:border-primary outline-none"
+                                  placeholder="ej: Nombre del Orador"
+                                  value={newFieldLabel}
+                                  onChange={(e) => setNewFieldLabel(e.target.value)}
+                                />
+                              </div>
+                            </div>
+                            <div className="flex justify-end gap-2 pt-1">
+                              <button
+                                type="button"
+                                onClick={() => setIsAddingField(false)}
+                                className="px-3 py-1 text-xs text-textMuted hover:text-white"
+                              >
+                                Cancelar
+                              </button>
+                              <button
+                                type="submit"
+                                className="btn-primary px-3 py-1 text-xs font-bold flex items-center gap-1"
+                              >
+                                <Plus className="w-3 h-3" /> Añadir
+                              </button>
+                            </div>
+                          </form>
+                        )}
 
-                        <div className="grid grid-cols-2 gap-2.5">
-                          <div>
-                            <label className="block text-xs font-bold text-textMuted mb-1">Reportero / Ponente (eddam-author)</label>
-                            <input 
-                              type="text" 
-                              className="w-full bg-background border border-white/10 rounded-lg p-2.5 text-white text-sm focus:border-primary outline-none transition-colors"
-                              value={state.customVariables?.['eddam-author'] ?? state.customVariables?.['eddam-speaker'] ?? ''}
-                              onChange={(e) => {
-                                handleVariableChange('eddam-author', e.target.value);
-                                handleVariableChange('eddam-speaker', e.target.value);
-                              }}
-                              placeholder="Ej: Juan Carlos Pérez"
-                            />
+                        {/* Listado de Variables Dinámicas */}
+                        {detectedVariables.length === 0 ? (
+                          <div className="p-5 text-center bg-black/40 rounded-xl border border-dashed border-white/10 space-y-2">
+                            <Sparkles className="w-6 h-6 text-primary mx-auto opacity-70" />
+                            <p className="text-xs text-textMuted font-medium">
+                              No hay variables detectadas en este overlay.
+                            </p>
+                            <p className="text-[11px] text-textMuted/60 leading-relaxed max-w-sm mx-auto">
+                              Genera tu diseño con el <strong>Asistente de IA</strong> o pulsa <strong>"Sincronizar desde Código"</strong> para extraer automáticamente los textos editables.
+                            </p>
                           </div>
-                          <div>
-                            <label className="block text-xs font-bold text-textMuted mb-1">Rol / Cargo (eddam-role)</label>
-                            <input 
-                              type="text" 
-                              className="w-full bg-background border border-white/10 rounded-lg p-2.5 text-white text-sm focus:border-primary outline-none transition-colors"
-                              value={state.customVariables?.['eddam-role'] ?? ''}
-                              onChange={(e) => handleVariableChange('eddam-role', e.target.value)}
-                              placeholder="Ej: Corresponsal"
-                            />
-                          </div>
-                        </div>
+                        ) : (
+                          <div className="space-y-3">
+                            {detectedVariables.map((variable) => (
+                              <div key={variable.id} className="space-y-1">
+                                <div className="flex items-center justify-between">
+                                  <label className="text-xs font-bold text-gray-200 flex items-center gap-2">
+                                    <span>{variable.label}</span>
+                                    <span className="font-mono text-[10px] text-textMuted/70 bg-white/5 px-1.5 py-0.5 rounded">
+                                      #{variable.id}
+                                    </span>
+                                  </label>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteField(variable.id)}
+                                    className="p-1 text-textMuted/50 hover:text-red-400 rounded transition-colors"
+                                    title={`Eliminar campo "${variable.label}"`}
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
 
-                        <div>
-                          <label className="block text-xs font-bold text-textMuted mb-1">Cintillo / Alerta (eddam-headline)</label>
-                          <input 
-                            type="text" 
-                            className="w-full bg-background border border-white/10 rounded-lg p-2.5 text-white text-sm focus:border-primary outline-none transition-colors"
-                            value={state.customVariables?.['eddam-headline'] ?? ''}
-                            onChange={(e) => handleVariableChange('eddam-headline', e.target.value)}
-                            placeholder="Ej: COMUNICADO OFICIAL: RESOLUCIONES EN TIEMPO REAL"
-                          />
-                        </div>
+                                {variable.type === 'textarea' ? (
+                                  <textarea
+                                    rows={2}
+                                    className="w-full bg-background border border-white/10 rounded-lg p-2.5 text-white text-sm focus:border-primary outline-none transition-colors leading-relaxed"
+                                    value={state.customVariables?.[variable.id] ?? ''}
+                                    onChange={(e) => handleVariableChange(variable.id, e.target.value)}
+                                    placeholder={variable.placeholder || `Escribe ${variable.label.toLowerCase()}...`}
+                                  />
+                                ) : (
+                                  <input
+                                    type="text"
+                                    className="w-full bg-background border border-white/10 rounded-lg p-2.5 text-white text-sm focus:border-primary outline-none transition-colors"
+                                    value={state.customVariables?.[variable.id] ?? ''}
+                                    onChange={(e) => handleVariableChange(variable.id, e.target.value)}
+                                    placeholder={variable.placeholder || `Escribe ${variable.label.toLowerCase()}...`}
+                                  />
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
                       </div>
                     )}
                   </section>

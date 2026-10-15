@@ -62,7 +62,13 @@ export const OVERLAY_STARTER_TEMPLATES: OverlayStarterTemplate[] = [
     </div>
 
   </div>
-</div>`
+</div>
+<!-- EDDAM_VARIABLES: [
+  {"id": "eddam-location", "label": "Ubicación / Cobertura", "default": "📍 COBERTURA ESPECIAL"},
+  {"id": "eddam-title", "label": "Titular Principal", "default": "INFORME EN VIVO: DESARROLLO DE LA TRANSMISIÓN"},
+  {"id": "eddam-author", "label": "Reportero / Nombre", "default": "Juan Carlos Pérez"},
+  {"id": "eddam-role", "label": "Cargo / Función", "default": "Corresponsal en Terreno"}
+] -->`
   },
   {
     id: 'conferencia',
@@ -88,7 +94,12 @@ export const OVERLAY_STARTER_TEMPLATES: OverlayStarterTemplate[] = [
       </p>
     </div>
   </div>
-</div>`
+</div>
+<!-- EDDAM_VARIABLES: [
+  {"id": "eddam-event", "label": "Nombre del Evento", "default": "CUMBRE DE TECNOLOGÍA & MEDIOS 2026"},
+  {"id": "eddam-speaker", "label": "Ponente / Conferencista", "default": "Dra. Carolina Méndez"},
+  {"id": "eddam-role", "label": "Cargo / Especialidad", "default": "Directora de Innovación Digital & Streaming"}
+] -->`
   },
   {
     id: 'breaking-news',
@@ -112,7 +123,10 @@ export const OVERLAY_STARTER_TEMPLATES: OverlayStarterTemplate[] = [
       EDDAM LIVE
     </div>
   </div>
-</div>`
+</div>
+<!-- EDDAM_VARIABLES: [
+  {"id": "eddam-headline", "label": "Cintillo / Alerta de Última Hora", "default": "COMUNICADO OFICIAL: AVANCES Y RESOLUCIONES EN TIEMPO REAL", "type": "textarea"}
+] -->`
   },
   {
     id: 'publicidad-creativa',
@@ -140,7 +154,11 @@ export const OVERLAY_STARTER_TEMPLATES: OverlayStarterTemplate[] = [
       <span>🌐 eddam.studio</span>
     </div>
   </div>
-</div>`
+</div>
+<!-- EDDAM_VARIABLES: [
+  {"id": "eddam-ad-title", "label": "Título del Auspiciador", "default": "Impulsa tu Marca en Alta Definición"},
+  {"id": "eddam-ad-desc", "label": "Descripción / Oferta", "default": "Soluciones gráficas en tiempo real para eventos, streaming y broadcast profesional.", "type": "textarea"}
+] -->`
   }
 ];
 
@@ -152,13 +170,24 @@ Necesito que generes el código para un OVERLAY de: "${overlayType}".
 REQUISITOS TÉCNICOS ESTRICTOS DE EDDAM OVERLAY STUDIO:
 1. Resolución nativa: 1920x1080 (Full HD).
 2. Fondo transparente: El contenedor raíz debe ocupar "w-full h-full" con fondo 100% transparente para que la señal de video de OBS se vea debajo sin obstrucciones.
-3. Estilos: Utiliza clases utilitarias de Tailwind CSS modernas (glassmorphism con backdrop-blur, degradados oscuros semitransparentes bg-black/80 o bg-gray-950/90, bordes finos border-white/10, sombras shadow-2xl).
+3. Estilos: Utiliza clases utilitarias de Tailwind CSS modernas (glassmorphism con backdrop-blur-md/xl, degradados oscuros semitransparentes como bg-black/85 o bg-gray-950/90, bordes finos border-white/15, sombras shadow-2xl).
 4. Animaciones: Agrega animaciones CSS sutiles y elegantes (animate-slide-up, animate-pulse, transiciones suaves).
-5. Textos e IDs dinámicos: Asigna IDs semánticos a los elementos editables (por ejemplo id="eddam-title", id="eddam-subtitle", id="eddam-author", id="eddam-location") para que el operador pueda cambiar los textos en vivo.
-6. Tipografía y legibilidad: Usa fuentes limpias, textos en negrita (font-black o font-extrabold), tracking cuidado y buen contraste para pantallas de transmisión.
-7. Formato de entrega: Devuelve ÚNICAMENTE el bloque HTML envuelto en un contenedor raíz:
-   <div class="w-full h-full ...">
-     ...
-   </div>
-   No incluyas etiquetas <html> ni <body>, solo el código interno listo para copiar y compilar.`;
+5. Textos e IDs dinámicos en el HTML: Asigna atributos id="nombre-variable" a cada texto que deba ser modificable en vivo por el operador en cabina (por ejemplo id="titulo", id="subtitulo", id="orador", id="ubicacion", etc.).
+6. Tipografía y legibilidad: Usa fuentes limpias, textos en negrita (font-black o font-extrabold), tracking cuidado y contraste de alta visibilidad para pantallas de transmisión.
+
+7. METADATA DE VARIABLES PARA EL PANEL DE CONTROL (CRÍTICO):
+Al final del código HTML, debes incluir OBLIGATORIAMENTE un comentario en formato JSON con la lista de variables editables correspondientes a los IDs que usaste en el HTML, para que el panel de control de Eddam cree automáticamente los campos de texto:
+
+<!-- EDDAM_VARIABLES: [
+  {"id": "tu-primer-id", "label": "Etiqueta Legible del Campo", "default": "Texto inicial de ejemplo"},
+  {"id": "tu-segundo-id", "label": "Otra Etiqueta", "default": "Otro texto de ejemplo", "type": "textarea"}
+] -->
+
+8. Formato de entrega: Devuelve ÚNICAMENTE el bloque HTML envuelto en un contenedor raíz:
+<div class="w-full h-full ...">
+  ...
+</div>
+<!-- EDDAM_VARIABLES: [...] -->
+
+No incluyas etiquetas <html> ni <body>, solo el código interno listo para copiar y compilar.`;
 };

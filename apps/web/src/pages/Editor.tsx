@@ -849,10 +849,12 @@ export default function Editor() {
                   </div>
                 </section>
               )}
-              </>{/* cierre de la rama else del ternario de loading */}
-              )}
             </>
-          ) : activeTab === 'personalizar' ? (
+          )}
+        </>
+      )}
+    </>
+  ) : activeTab === 'personalizar' ? (
             id?.startsWith('ad-') ? (
               <div className="space-y-4">
                 <div className="card p-5 bg-surfaceHover border-white/5 shadow-md">

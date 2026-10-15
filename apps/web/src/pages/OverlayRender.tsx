@@ -82,9 +82,11 @@ export default function OverlayRender() {
           <TickerOverlay />
           <PopupOverlay />
         </>
+      ) : (id === 'liga-pro' || state.overlayType === 'lineup') ? (
+        <Lineup />
       ) : (
         <>
-          {(id === 'liga-pro' || state.overlayType === 'lineup') ? <Lineup /> : <Scoreboard />}
+          <Scoreboard />
           <ReplayOverlay />
         </>
       )}

@@ -43,6 +43,9 @@ export default function Editor() {
   const [activeTab, setActiveTab] = useState<'controles' | 'personalizar' | 'jugadores' | 'codigo'>('controles');
   
   const isCustomProject = state.overlayType === 'custom' || Boolean(state.customCode);
+  const isAdProject = state.overlayType === 'publicidad' || Boolean(id?.startsWith('ad-'));
+  const isLineupProject = state.overlayType === 'lineup' || id === 'liga-pro';
+  const isScoreboardProject = !isCustomProject && !isAdProject && !isLineupProject;
 
   const [localCode, setLocalCode] = useState(state.customCode || '');
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
@@ -127,14 +130,24 @@ export default function Editor() {
       // para evitar que isCustomProject quede en true entre proyectos
       state.updateState({ customCode: '', overlayType: undefined, customVariables: {} });
       state.connectWebSocket('studio', id);
-      state.loadOverlay(id);
-      // Obtener el nombre del proyecto desde la API
+      
       const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
       fetch(`${baseUrl}/api/overlays/${id}`)
         .then(res => res.ok ? res.json() : null)
         .then(data => {
           if (data?.name) setProjectName(data.name);
           else setProjectName(id);
+
+          if (data) {
+            const detectedType = data.type || (id.startsWith('ad-') ? 'publicidad' : id === 'liga-pro' ? 'lineup' : (data.settings?.customCode ? 'custom' : 'scoreboard'));
+            state.updateState({ 
+              overlayType: detectedType,
+              ...(data.settings || {}) 
+            });
+            if (data.settings?.customCode) {
+              setLocalCode(data.settings.customCode);
+            }
+          }
         })
         .catch(() => setProjectName(id))
         .finally(() => setIsOverlayLoading(false));
@@ -355,7 +368,7 @@ export default function Editor() {
               >
                 <Settings className="w-4 h-4" /> Personalizar
               </button>
-              {id === 'liga-pro' && (
+              {isLineupProject && (
                 <button 
                   className={`flex-1 py-3 text-sm font-semibold transition-colors flex items-center justify-center gap-2 ${activeTab === 'jugadores' ? 'text-primary border-b-2 border-primary' : 'text-textMuted hover:text-white'}`}
                   onClick={() => setActiveTab('jugadores')}
@@ -406,10 +419,22 @@ export default function Editor() {
               <section className="card p-5 bg-surfaceHover border-white/5 shadow-md flex items-center justify-between">
                 <div>
                   <h3 className="text-xs font-bold uppercase tracking-wider text-textMuted mb-1">
-                    {isCustomProject ? 'Estado del Overlay (Master)' : id?.startsWith('ad-') ? 'Estado de la Publicidad' : 'Estado del Marcador'}
+                    {isCustomProject 
+                      ? 'Estado del Overlay (Master)' 
+                      : isAdProject 
+                      ? 'Estado de la Publicidad' 
+                      : isLineupProject 
+                      ? 'Estado de las Alineaciones' 
+                      : 'Estado del Marcador'}
                   </h3>
                   <p className="text-xs text-textMuted/70">
-                    {isCustomProject ? 'Oculta o muestra el gráfico en la señal en vivo de OBS.' : id?.startsWith('ad-') ? 'Oculta la publicidad en vivo.' : 'Oculta para cambiar equipos sin que se vea en vivo.'}
+                    {isCustomProject 
+                      ? 'Oculta o muestra el gráfico en la señal en vivo de OBS.' 
+                      : isAdProject 
+                      ? 'Oculta la publicidad en vivo.' 
+                      : isLineupProject 
+                      ? 'Oculta las alineaciones en vivo.' 
+                      : 'Oculta para cambiar equipos sin que se vea en vivo.'}
                   </p>
                 </div>
                 <button 
@@ -517,7 +542,7 @@ export default function Editor() {
               )}
 
               {/* CONTROLES DE PUBLICIDAD */}
-              {id?.startsWith('ad-') && (
+              {isAdProject && (
                 <section className="space-y-4">
                   {/* SELLO DEL AUSPICIADOR */}
                   <div className="card p-5 bg-surfaceHover border-blue-500/20 shadow-md">
@@ -768,35 +793,8 @@ export default function Editor() {
                 </section>
               )}
 
-              {!id?.startsWith('ad-') && (
-                <>
-
-              {id !== 'liga-pro' && (
-                <section className="card p-5 bg-surfaceHover border-white/5 shadow-md">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-textMuted mb-4">Reloj de Juego</h3>
-                  <div className="flex flex-col items-center gap-4">
-                    <div className="text-5xl font-mono font-black text-white bg-black/50 px-6 py-3 rounded-xl border border-white/10 shadow-inner">
-                      {formatTime(state.timerElapsed)}
-                    </div>
-                    <div className="flex w-full gap-2">
-                      {!state.timerIsRunning ? (
-                        <button onClick={() => updateField('timerIsRunning', true)} className="flex-1 bg-green-600 hover:bg-green-500 text-white font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-2">
-                          <Play className="w-4 h-4" /> Jugar
-                        </button>
-                      ) : (
-                        <button onClick={() => updateField('timerIsRunning', false)} className="flex-1 bg-amber-600 hover:bg-amber-500 text-white font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-2">
-                          <Square className="w-4 h-4" /> Pausar
-                        </button>
-                      )}
-                      <button onClick={() => updateField('timerElapsed', 0)} className="bg-surface border border-border hover:bg-surfaceHover text-white py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2">
-                        <RotateCcw className="w-4 h-4" /> Reset
-                      </button>
-                    </div>
-                  </div>
-                </section>
-              )}
-
-              {id === 'liga-pro' ? (
+              {/* CONTROLES DE ALINEACIÓN (LINEUP) */}
+              {isLineupProject && (
                 <section className="card p-5 bg-surfaceHover border-white/5 shadow-md">
                   <h3 className="text-xs font-bold uppercase tracking-wider text-textMuted mb-4">Equipo a Mostrar en Pantalla</h3>
                   <div className="flex gap-2">
@@ -804,58 +802,84 @@ export default function Editor() {
                     <button onClick={() => updateField('lineupTeamVisible', 'away')} className={`flex-1 py-2 rounded font-bold ${state.lineupTeamVisible === 'away' ? 'bg-primary text-white' : 'bg-white/10 text-textMuted hover:bg-white/20'}`}>Visitante ({state.awayName})</button>
                   </div>
                 </section>
-              ) : (
-                <section className="space-y-4">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-textMuted flex items-center gap-2">
-                    <Trophy className="w-4 h-4"/> Marcador
-                  </h3>
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="card p-4 space-y-3 bg-surfaceHover border-primary/20 shadow-md">
-                      <div className="text-xs text-textMuted font-bold text-center">LOCAL ({state.homeName})</div>
-                      <div className="flex items-center justify-between bg-background rounded-lg p-1 border border-border">
-                        <button onClick={() => updateField('homeScore', Math.max(0, state.homeScore - 1))} className="p-3 hover:text-primary transition-colors"><Minus className="w-5 h-5"/></button>
-                        <span className="font-bold text-3xl">{state.homeScore}</span>
-                        <button onClick={() => updateField('homeScore', state.homeScore + 1)} className="p-3 hover:text-primary transition-colors"><Plus className="w-5 h-5"/></button>
-                      </div>
-                      <button onClick={() => triggerGoal('home')} className="w-full btn-primary bg-green-600 hover:bg-green-500 py-2 text-sm font-bold shadow-lg shadow-green-900/50">¡GOL LOCAL!</button>
-                    </div>
+              )}
 
-                    <div className="card p-4 space-y-3 bg-surfaceHover border-red-500/20 shadow-md">
-                      <div className="text-xs text-textMuted font-bold text-center">VISITANTE ({state.awayName})</div>
-                      <div className="flex items-center justify-between bg-background rounded-lg p-1 border border-border">
-                        <button onClick={() => updateField('awayScore', Math.max(0, state.awayScore - 1))} className="p-3 hover:text-red-500 transition-colors"><Minus className="w-5 h-5"/></button>
-                        <span className="font-bold text-3xl">{state.awayScore}</span>
-                        <button onClick={() => updateField('awayScore', state.awayScore + 1)} className="p-3 hover:text-red-500 transition-colors"><Plus className="w-5 h-5"/></button>
+              {/* CONTROLES DE MARCADOR (SCOREBOARD) */}
+              {isScoreboardProject && (
+                <>
+                  <section className="card p-5 bg-surfaceHover border-white/5 shadow-md">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-textMuted mb-4">Reloj de Juego</h3>
+                    <div className="flex flex-col items-center gap-4">
+                      <div className="text-5xl font-mono font-black text-white bg-black/50 px-6 py-3 rounded-xl border border-white/10 shadow-inner">
+                        {formatTime(state.timerElapsed)}
                       </div>
-                      <button onClick={() => triggerGoal('away')} className="w-full btn-primary bg-red-600 hover:bg-red-500 py-2 text-sm font-bold shadow-lg shadow-red-900/50">¡GOL VISITANTE!</button>
+                      <div className="flex w-full gap-2">
+                        {!state.timerIsRunning ? (
+                          <button onClick={() => updateField('timerIsRunning', true)} className="flex-1 bg-green-600 hover:bg-green-500 text-white font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-2">
+                            <Play className="w-4 h-4" /> Jugar
+                          </button>
+                        ) : (
+                          <button onClick={() => updateField('timerIsRunning', false)} className="flex-1 bg-amber-600 hover:bg-amber-500 text-white font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-2">
+                            <Square className="w-4 h-4" /> Pausar
+                          </button>
+                        )}
+                        <button onClick={() => updateField('timerElapsed', 0)} className="bg-surface border border-border hover:bg-surfaceHover text-white py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2">
+                          <RotateCcw className="w-4 h-4" /> Reset
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                  
-                  {/* Botón Especial: Replay / Destacado */}
-                  <div className="card p-4 bg-gradient-to-r from-yellow-600/20 to-yellow-800/20 border-yellow-500/30 shadow-lg">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-yellow-500 mb-3 flex items-center gap-2">
-                      <Play className="w-4 h-4" />
-                      Efecto Destacado
+                  </section>
+
+                  <section className="space-y-4">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-textMuted flex items-center gap-2">
+                      <Trophy className="w-4 h-4"/> Marcador
                     </h3>
-                    <button 
-                      onClick={triggerReplay}
-                      disabled={state.isReplayActive}
-                      className={`w-full py-3 rounded-lg font-bold italic tracking-widest text-lg uppercase transition-all shadow-xl flex items-center justify-center gap-2 ${state.isReplayActive ? 'bg-gray-600 text-gray-400 cursor-not-allowed' : 'bg-gradient-to-r from-yellow-500 to-yellow-600 hover:to-yellow-500 text-black border-2 border-yellow-400 hover:scale-[1.02]'}`}
-                    >
-                      <Trophy className="w-5 h-5" />
-                      {state.isReplayActive ? 'Reproduciendo...' : 'Lanzar Replay'}
-                    </button>
-                  </div>
-                </section>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="card p-4 space-y-3 bg-surfaceHover border-primary/20 shadow-md">
+                        <div className="text-xs text-textMuted font-bold text-center">LOCAL ({state.homeName})</div>
+                        <div className="flex items-center justify-between bg-background rounded-lg p-1 border border-border">
+                          <button onClick={() => updateField('homeScore', Math.max(0, state.homeScore - 1))} className="p-3 hover:text-primary transition-colors"><Minus className="w-5 h-5"/></button>
+                          <span className="font-bold text-3xl">{state.homeScore}</span>
+                          <button onClick={() => updateField('homeScore', state.homeScore + 1)} className="p-3 hover:text-primary transition-colors"><Plus className="w-5 h-5"/></button>
+                        </div>
+                        <button onClick={() => triggerGoal('home')} className="w-full btn-primary bg-green-600 hover:bg-green-500 py-2 text-sm font-bold shadow-lg shadow-green-900/50">¡GOL LOCAL!</button>
+                      </div>
+
+                      <div className="card p-4 space-y-3 bg-surfaceHover border-red-500/20 shadow-md">
+                        <div className="text-xs text-textMuted font-bold text-center">VISITANTE ({state.awayName})</div>
+                        <div className="flex items-center justify-between bg-background rounded-lg p-1 border border-border">
+                          <button onClick={() => updateField('awayScore', Math.max(0, state.awayScore - 1))} className="p-3 hover:text-red-500 transition-colors"><Minus className="w-5 h-5"/></button>
+                          <span className="font-bold text-3xl">{state.awayScore}</span>
+                          <button onClick={() => updateField('awayScore', state.awayScore + 1)} className="p-3 hover:text-red-500 transition-colors"><Plus className="w-5 h-5"/></button>
+                        </div>
+                        <button onClick={() => triggerGoal('away')} className="w-full btn-primary bg-red-600 hover:bg-red-500 py-2 text-sm font-bold shadow-lg shadow-red-900/50">¡GOL VISITANTE!</button>
+                      </div>
+                    </div>
+                    
+                    {/* Botón Especial: Replay / Destacado */}
+                    <div className="card p-4 bg-gradient-to-r from-yellow-600/20 to-yellow-800/20 border-yellow-500/30 shadow-lg">
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-yellow-500 mb-3 flex items-center gap-2">
+                        <Play className="w-4 h-4" />
+                        Efecto Destacado
+                      </h3>
+                      <button 
+                        onClick={triggerReplay}
+                        disabled={state.isReplayActive}
+                        className={`w-full py-3 rounded-lg font-bold italic tracking-widest text-lg uppercase transition-all shadow-xl flex items-center justify-center gap-2 ${state.isReplayActive ? 'bg-gray-600 text-gray-400 cursor-not-allowed' : 'bg-gradient-to-r from-yellow-500 to-yellow-600 hover:to-yellow-500 text-black border-2 border-yellow-400 hover:scale-[1.02]'}`}
+                      >
+                        <Trophy className="w-5 h-5" />
+                        {state.isReplayActive ? 'Reproduciendo...' : 'Lanzar Replay'}
+                      </button>
+                    </div>
+                  </section>
+                </>
               )}
             </>
           )}
         </>
-      )}
-    </>
-  ) : activeTab === 'personalizar' ? (
-            id?.startsWith('ad-') ? (
+      ) : activeTab === 'personalizar' ? (
+            isAdProject ? (
               <div className="space-y-4">
                 <div className="card p-5 bg-surfaceHover border-white/5 shadow-md">
                   <h3 className="text-xs font-bold uppercase tracking-wider text-textMuted mb-4 flex items-center gap-2">
@@ -1189,16 +1213,18 @@ export default function Editor() {
             <div className="w-[1920px] h-[1080px] origin-top-left relative" style={{ transform: `scale(${scale})` }}>
                 {isCustomProject ? (
                   <CustomOverlay />
-                ) : id?.startsWith('ad-') ? (
+                ) : isAdProject ? (
                   <>
                     <AdOverlay isPreview />
                     <SponsorOverlay isPreview />
                     <TickerOverlay isPreview />
                     <PopupOverlay isPreview />
                   </>
+                ) : isLineupProject ? (
+                  <Lineup isPreview />
                 ) : (
                   <>
-                    {id === 'liga-pro' ? <Lineup isPreview /> : <Scoreboard isPreview />}
+                    <Scoreboard isPreview />
                     <ReplayOverlay />
                   </>
                 )}
@@ -1214,16 +1240,18 @@ export default function Editor() {
             <div className="w-[1920px] h-[1080px] origin-top-left relative" style={{ transform: `scale(${scale})` }}>
                 {isCustomProject ? (
                   <CustomOverlay />
-                ) : id?.startsWith('ad-') ? (
+                ) : isAdProject ? (
                   <>
                     <AdOverlay />
                     <SponsorOverlay />
                     <TickerOverlay />
                     <PopupOverlay />
                   </>
+                ) : isLineupProject ? (
+                  <Lineup />
                 ) : (
                   <>
-                    {id === 'liga-pro' ? <Lineup /> : <Scoreboard />}
+                    <Scoreboard />
                     <ReplayOverlay />
                   </>
                 )}

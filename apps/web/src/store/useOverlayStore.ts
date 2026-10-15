@@ -199,7 +199,17 @@ export const useOverlayStore = create<OverlayState>((set, get) => ({
       currentWs.close();
     }
 
-    const baseUrl = import.meta.env.VITE_API_URL?.replace('http', 'ws') || 'ws://localhost:3000';
+    let baseUrl = import.meta.env.VITE_API_URL;
+    if (!baseUrl) {
+      if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
+        const wsProto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        baseUrl = `${wsProto}//${window.location.host}`;
+      } else {
+        baseUrl = 'ws://localhost:3000';
+      }
+    } else {
+      baseUrl = baseUrl.replace(/^http/i, 'ws');
+    }
     const wsUrl = `${baseUrl}/ws/${overlayId}`;
     const ws = new WebSocket(wsUrl);
 

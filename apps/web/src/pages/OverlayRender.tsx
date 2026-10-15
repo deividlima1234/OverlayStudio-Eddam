@@ -30,6 +30,17 @@ export default function OverlayRender() {
     document.body.style.backgroundColor = 'transparent';
     document.documentElement.style.backgroundColor = 'transparent';
     if (id) {
+      // Intentar cargar de localStorage primero para renderizado instantáneo
+      try {
+        const cached = localStorage.getItem(`eddam_overlay_${id}`);
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          state.updateState(parsed);
+        }
+      } catch (e) {
+        console.warn('No se pudo leer cache local:', e);
+      }
+
       state.connectWebSocket('renderer', id);
       state.loadOverlay(id);
     }

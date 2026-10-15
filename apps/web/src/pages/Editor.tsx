@@ -252,15 +252,49 @@ export default function Editor() {
 
   const [isSaving, setIsSaving] = useState(false);
 
-  const handleCompile = () => {
+  const handleCompile = async () => {
     updateField('customCode', localCode);
+    updateField('overlayType', 'custom');
+
+    // Activar visibilidad MASTER para que OBS y el Modo Live lo muestren de inmediato
+    if (!state.isVisible) {
+      updateField('isVisible', true);
+    }
+
     const defs = parseOverlayVariables(localCode);
+    let initialVars = state.customVariables;
     if (defs.length > 0) {
       setDetectedVariables(defs);
-      const initial = extractInitialValues(defs, state.customVariables);
-      updateField('customVariables', initial);
+      initialVars = extractInitialValues(defs, state.customVariables);
+      updateField('customVariables', initialVars);
     }
-    showToast('Overlay compilado y transmitido con éxito.', 'success');
+
+    // Auto-guardado inmediato en localStorage y en la API
+    const overlayId = id || 'default';
+    const settingsToSave = {
+      ...state,
+      isVisible: true,
+      customCode: localCode,
+      overlayType: 'custom',
+      customVariables: initialVars
+    };
+
+    try {
+      localStorage.setItem(`eddam_overlay_${overlayId}`, JSON.stringify(settingsToSave));
+      const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+      await fetch(`${baseUrl}/api/overlays/${overlayId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'custom',
+          settings: settingsToSave
+        })
+      });
+    } catch (e) {
+      console.warn('Auto-guardado al compilar:', e);
+    }
+
+    showToast('Overlay compilado y transmitido en vivo con éxito.', 'success');
   };
 
   const handleVariableChange = (key: string, value: string) => {
@@ -409,6 +443,16 @@ export default function Editor() {
           }
         })
       });
+
+      const overlaySettings = {
+        ...state,
+        isVisible: state.isVisible,
+        customCode: localCode || state.customCode,
+        customTemplate: state.customTemplate,
+        customVariables: state.customVariables,
+        overlayType: state.overlayType || (localCode || state.customCode ? 'custom' : 'scoreboard'),
+      };
+      localStorage.setItem(`eddam_overlay_${overlayId}`, JSON.stringify(overlaySettings));
 
       if (!response.ok) throw new Error('Error al guardar');
       showToast('¡Overlay guardado correctamente en la Base de Datos!', 'success');
@@ -1806,7 +1850,7 @@ export default function Editor() {
             <span className="absolute top-4 left-4 text-[10px] font-bold px-2 py-1 rounded bg-yellow-500 text-black z-30 uppercase tracking-widest shadow-lg">Preview (Estudio)</span>
             <div className="w-[1920px] h-[1080px] origin-top-left relative" style={{ transform: `scale(${scale})` }}>
                 {isCustomProject ? (
-                  <CustomOverlay />
+                  <CustomOverlay isPreview />
                 ) : isAdProject ? (
                   <>
                     <AdOverlay isPreview />

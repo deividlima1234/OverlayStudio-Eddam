@@ -3,11 +3,15 @@ import { useOverlayStore } from '../store/useOverlayStore';
 
 interface CustomOverlayProps {
   className?: string;
+  isPreview?: boolean;
 }
 
-export default function CustomOverlay({ className = '' }: CustomOverlayProps) {
+export default function CustomOverlay({ className = '', isPreview = false }: CustomOverlayProps) {
   const { customCode, isVisible, customVariables } = useOverlayStore();
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // En preview de estudio siempre se muestra; en vivo (OBS / render) depende de isVisible
+  const shouldShow = isPreview ? true : isVisible;
 
   // Procesar el HTML inyectando las variables dinámicas si existen
   const processedHtml = useMemo(() => {
@@ -55,11 +59,11 @@ export default function CustomOverlay({ className = '' }: CustomOverlayProps) {
   return (
     <div 
       className={`w-full h-full absolute inset-0 pointer-events-none transition-all duration-500 ease-in-out ${
-        isVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
+        shouldShow ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
       } ${className}`}
       style={{
         transitionProperty: 'opacity, transform',
-        visibility: isVisible ? 'visible' : 'hidden'
+        visibility: shouldShow ? 'visible' : 'hidden'
       }}
     >
       <div 

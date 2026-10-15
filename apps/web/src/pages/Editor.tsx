@@ -70,6 +70,31 @@ export default function Editor() {
   
   const [openSection, setOpenSection] = useState<'home' | 'away' | null>('home');
 
+  // --- Secciones Colapsables (Acordeón de Controles) ---
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>({
+    sponsor: true,
+    banner: true,
+    ticker: true,
+    popup: true,
+    variables: true,
+    templates: false,
+    clock: true,
+    score: true,
+    replay: true,
+    lineupTeam: true,
+    gameMode: true,
+    formation: true,
+    players: true,
+    adAnimation: true,
+  });
+
+  const toggleSection = (key: string) => {
+    setOpenSections(prev => ({
+      ...prev,
+      [key]: prev[key] === undefined ? false : !prev[key]
+    }));
+  };
+
   // --- Resizable Panel ---
   const [panelWidth, setPanelWidth] = useState(450);
   const isResizing = useRef(false);
@@ -452,78 +477,97 @@ export default function Editor() {
               {/* Si es proyecto de código personalizado, mostrar controles rápidos de variables */}
               {isCustomProject && (
                 <>
-                  <section className="card p-5 bg-surfaceHover border-white/5 shadow-md space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-2">
-                        <Sparkles className="w-4 h-4" /> Textos en Vivo (Variables)
-                      </h3>
-                      <span className="text-[10px] text-emerald-400 font-semibold bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
-                        Sincronización WebSocket
-                      </span>
+                  <section className="card overflow-hidden bg-surfaceHover border border-white/5 shadow-md transition-all">
+                    <div 
+                      className="p-4 flex items-center justify-between cursor-pointer hover:bg-white/[0.04] transition-colors select-none group"
+                      onClick={() => toggleSection('variables')}
+                    >
+                      <div className="flex items-center gap-2">
+                        <Sparkles className="w-4 h-4 text-primary" />
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-primary">
+                          Textos en Vivo (Variables)
+                        </h3>
+                      </div>
+                      <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                        <span className="text-[10px] text-emerald-400 font-semibold bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                          WebSocket
+                        </span>
+                        <button 
+                          type="button"
+                          onClick={() => toggleSection('variables')}
+                          className="p-1 text-textMuted group-hover:text-white hover:bg-white/10 rounded transition-colors"
+                          title={openSections.variables ? 'Colapsar opción' : 'Expandir opción'}
+                        >
+                          {openSections.variables ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                        </button>
+                      </div>
                     </div>
-                    <div className="space-y-3">
-                      <div>
-                        <label className="block text-xs font-bold text-textMuted mb-1">Titular Principal (eddam-title)</label>
-                        <input 
-                          type="text" 
-                          className="w-full bg-background border border-white/10 rounded-lg p-2.5 text-white text-sm focus:border-primary outline-none transition-colors"
-                          value={state.customVariables?.['eddam-title'] ?? ''}
-                          onChange={(e) => handleVariableChange('eddam-title', e.target.value)}
-                          placeholder="Ej: INFORME ESPECIAL: TRANSMISIÓN EN DIRECTO"
-                        />
-                      </div>
 
-                      <div>
-                        <label className="block text-xs font-bold text-textMuted mb-1">Ubicación / Evento (eddam-location)</label>
-                        <input 
-                          type="text" 
-                          className="w-full bg-background border border-white/10 rounded-lg p-2.5 text-white text-sm focus:border-primary outline-none transition-colors"
-                          value={state.customVariables?.['eddam-location'] ?? state.customVariables?.['eddam-event'] ?? ''}
-                          onChange={(e) => {
-                            handleVariableChange('eddam-location', e.target.value);
-                            handleVariableChange('eddam-event', e.target.value);
-                          }}
-                          placeholder="Ej: 📍 QUITO, ECUADOR o CUMBRE DIGITAL"
-                        />
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-2.5">
+                    {openSections.variables && (
+                      <div className="p-4 pt-0 border-t border-white/5 space-y-3 mt-1 pt-4">
                         <div>
-                          <label className="block text-xs font-bold text-textMuted mb-1">Reportero / Ponente (eddam-author)</label>
+                          <label className="block text-xs font-bold text-textMuted mb-1">Titular Principal (eddam-title)</label>
                           <input 
                             type="text" 
                             className="w-full bg-background border border-white/10 rounded-lg p-2.5 text-white text-sm focus:border-primary outline-none transition-colors"
-                            value={state.customVariables?.['eddam-author'] ?? state.customVariables?.['eddam-speaker'] ?? ''}
+                            value={state.customVariables?.['eddam-title'] ?? ''}
+                            onChange={(e) => handleVariableChange('eddam-title', e.target.value)}
+                            placeholder="Ej: INFORME ESPECIAL: TRANSMISIÓN EN DIRECTO"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-bold text-textMuted mb-1">Ubicación / Evento (eddam-location)</label>
+                          <input 
+                            type="text" 
+                            className="w-full bg-background border border-white/10 rounded-lg p-2.5 text-white text-sm focus:border-primary outline-none transition-colors"
+                            value={state.customVariables?.['eddam-location'] ?? state.customVariables?.['eddam-event'] ?? ''}
                             onChange={(e) => {
-                              handleVariableChange('eddam-author', e.target.value);
-                              handleVariableChange('eddam-speaker', e.target.value);
+                              handleVariableChange('eddam-location', e.target.value);
+                              handleVariableChange('eddam-event', e.target.value);
                             }}
-                            placeholder="Ej: Juan Carlos Pérez"
+                            placeholder="Ej: 📍 QUITO, ECUADOR o CUMBRE DIGITAL"
                           />
                         </div>
+
+                        <div className="grid grid-cols-2 gap-2.5">
+                          <div>
+                            <label className="block text-xs font-bold text-textMuted mb-1">Reportero / Ponente (eddam-author)</label>
+                            <input 
+                              type="text" 
+                              className="w-full bg-background border border-white/10 rounded-lg p-2.5 text-white text-sm focus:border-primary outline-none transition-colors"
+                              value={state.customVariables?.['eddam-author'] ?? state.customVariables?.['eddam-speaker'] ?? ''}
+                              onChange={(e) => {
+                                handleVariableChange('eddam-author', e.target.value);
+                                handleVariableChange('eddam-speaker', e.target.value);
+                              }}
+                              placeholder="Ej: Juan Carlos Pérez"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-bold text-textMuted mb-1">Rol / Cargo (eddam-role)</label>
+                            <input 
+                              type="text" 
+                              className="w-full bg-background border border-white/10 rounded-lg p-2.5 text-white text-sm focus:border-primary outline-none transition-colors"
+                              value={state.customVariables?.['eddam-role'] ?? ''}
+                              onChange={(e) => handleVariableChange('eddam-role', e.target.value)}
+                              placeholder="Ej: Corresponsal"
+                            />
+                          </div>
+                        </div>
+
                         <div>
-                          <label className="block text-xs font-bold text-textMuted mb-1">Rol / Cargo (eddam-role)</label>
+                          <label className="block text-xs font-bold text-textMuted mb-1">Cintillo / Alerta (eddam-headline)</label>
                           <input 
                             type="text" 
                             className="w-full bg-background border border-white/10 rounded-lg p-2.5 text-white text-sm focus:border-primary outline-none transition-colors"
-                            value={state.customVariables?.['eddam-role'] ?? ''}
-                            onChange={(e) => handleVariableChange('eddam-role', e.target.value)}
-                            placeholder="Ej: Corresponsal"
+                            value={state.customVariables?.['eddam-headline'] ?? ''}
+                            onChange={(e) => handleVariableChange('eddam-headline', e.target.value)}
+                            placeholder="Ej: COMUNICADO OFICIAL: RESOLUCIONES EN TIEMPO REAL"
                           />
                         </div>
                       </div>
-
-                      <div>
-                        <label className="block text-xs font-bold text-textMuted mb-1">Cintillo / Alerta (eddam-headline)</label>
-                        <input 
-                          type="text" 
-                          className="w-full bg-background border border-white/10 rounded-lg p-2.5 text-white text-sm focus:border-primary outline-none transition-colors"
-                          value={state.customVariables?.['eddam-headline'] ?? ''}
-                          onChange={(e) => handleVariableChange('eddam-headline', e.target.value)}
-                          placeholder="Ej: COMUNICADO OFICIAL: RESOLUCIONES EN TIEMPO REAL"
-                        />
-                      </div>
-                    </div>
+                    )}
                   </section>
 
                   <section className="card p-5 bg-surfaceHover border-white/5 shadow-md flex items-center justify-between">
@@ -545,334 +589,551 @@ export default function Editor() {
               {isAdProject && (
                 <section className="space-y-4">
                   {/* SELLO DEL AUSPICIADOR */}
-                  <div className="card p-5 bg-surfaceHover border-blue-500/20 shadow-md">
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-xs font-bold uppercase tracking-wider text-blue-400 flex items-center gap-2">
-                        <ImageIcon className="w-4 h-4" />
-                        Sello Superior (Auspiciador)
-                      </h3>
-                      <button 
-                        onClick={() => updateField('isSponsorVisible', !state.isSponsorVisible)}
-                        className={`text-[10px] px-2 py-1 rounded font-bold ${state.isSponsorVisible ? 'bg-green-600 hover:bg-green-500' : 'bg-red-600 hover:bg-red-500'}`}
-                      >
-                        {state.isSponsorVisible ? <><Eye className="w-3 h-3 inline mr-1" /> Visible</> : <><EyeOff className="w-3 h-3 inline mr-1" /> Oculto</>}
-                      </button>
+                  <div className="card overflow-hidden bg-surfaceHover border border-blue-500/20 shadow-md transition-all">
+                    <div 
+                      className="p-4 flex items-center justify-between cursor-pointer hover:bg-white/[0.04] transition-colors select-none group"
+                      onClick={() => toggleSection('sponsor')}
+                    >
+                      <div className="flex items-center gap-2">
+                        <ImageIcon className="w-4 h-4 text-blue-400" />
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-blue-400">
+                          Sello Superior (Auspiciador)
+                        </h3>
+                      </div>
+                      <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                        <button 
+                          onClick={() => updateField('isSponsorVisible', !state.isSponsorVisible)}
+                          className={`text-[10px] px-2.5 py-1 rounded font-bold transition-all shadow-sm flex items-center gap-1 ${state.isSponsorVisible ? 'bg-green-600 hover:bg-green-500 text-white' : 'bg-red-600 hover:bg-red-500 text-white'}`}
+                        >
+                          {state.isSponsorVisible ? <><Eye className="w-3 h-3 inline mr-1" /> Visible</> : <><EyeOff className="w-3 h-3 inline mr-1" /> Oculto</>}
+                        </button>
+                        <button 
+                          type="button"
+                          onClick={() => toggleSection('sponsor')}
+                          className="p-1 text-textMuted group-hover:text-white hover:bg-white/10 rounded transition-colors"
+                          title={openSections.sponsor ? 'Colapsar opción' : 'Expandir opción'}
+                        >
+                          {openSections.sponsor ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                        </button>
+                      </div>
                     </div>
                     
-                    <div className="flex items-center gap-4">
-                      {state.sponsorLogo ? (
-                        <img src={state.sponsorLogo} alt="Sponsor" className="w-16 h-16 object-contain bg-black/50 p-1 rounded-lg border border-white/10" />
-                      ) : (
-                        <div className="w-16 h-16 bg-white/5 rounded-lg flex items-center justify-center border border-white/5">
-                          <ImageIcon className="w-6 h-6 text-white/20" />
+                    {openSections.sponsor && (
+                      <div className="p-4 pt-0 border-t border-white/5 space-y-4 mt-1 pt-4">
+                        <div className="flex items-center gap-4">
+                          {state.sponsorLogo ? (
+                            <img src={state.sponsorLogo} alt="Sponsor" className="w-16 h-16 object-contain bg-black/50 p-1 rounded-lg border border-white/10" />
+                          ) : (
+                            <div className="w-16 h-16 bg-white/5 rounded-lg flex items-center justify-center border border-white/5">
+                              <ImageIcon className="w-6 h-6 text-white/20" />
+                            </div>
+                          )}
+                          <input 
+                            type="file" 
+                            accept="image/*" 
+                            id="sponsorLogoInput" 
+                            className="hidden" 
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                const reader = new FileReader();
+                                reader.onloadend = () => updateField('sponsorLogo', reader.result);
+                                reader.readAsDataURL(file);
+                              }
+                            }} 
+                          />
+                          <label htmlFor="sponsorLogoInput" className="bg-white/10 hover:bg-white/20 px-4 py-2 rounded-lg text-xs font-bold cursor-pointer transition-colors text-white">
+                            Subir Imagen
+                          </label>
                         </div>
-                      )}
-                      <input 
-                        type="file" 
-                        accept="image/*" 
-                        id="sponsorLogoInput" 
-                        className="hidden" 
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) {
-                            const reader = new FileReader();
-                            reader.onloadend = () => updateField('sponsorLogo', reader.result);
-                            reader.readAsDataURL(file);
-                          }
-                        }} 
-                      />
-                      <label htmlFor="sponsorLogoInput" className="bg-white/10 hover:bg-white/20 px-4 py-2 rounded-lg text-xs font-bold cursor-pointer transition-colors text-white">
-                        Subir Imagen
-                      </label>
-                    </div>
 
-                    {/* Mandos de Posición */}
-                    <div className="mt-4 pt-4 border-t border-white/5 space-y-3">
-                      <div className="flex flex-col gap-1">
-                        <div className="flex justify-between text-xs text-textMuted">
-                          <span>Posición Horizontal (X)</span>
-                          <span className="font-mono bg-black/50 px-1 rounded">{state.sponsorOffsetX}px</span>
+                        {/* Mandos de Posición */}
+                        <div className="mt-4 pt-4 border-t border-white/5 space-y-3">
+                          <div className="flex flex-col gap-1">
+                            <div className="flex justify-between text-xs text-textMuted">
+                              <span>Posición Horizontal (X)</span>
+                              <span className="font-mono bg-black/50 px-1 rounded">{state.sponsorOffsetX}px</span>
+                            </div>
+                            <input type="range" min="-1000" max="1000" value={state.sponsorOffsetX} onChange={(e) => updateField('sponsorOffsetX', Number(e.target.value))} className="w-full accent-blue-500" />
+                          </div>
+                          <div className="flex flex-col gap-1">
+                            <div className="flex justify-between text-xs text-textMuted">
+                              <span>Posición Vertical (Y)</span>
+                              <span className="font-mono bg-black/50 px-1 rounded">{state.sponsorOffsetY}px</span>
+                            </div>
+                            <input type="range" min="-1000" max="1000" value={state.sponsorOffsetY} onChange={(e) => updateField('sponsorOffsetY', Number(e.target.value))} className="w-full accent-blue-500" />
+                          </div>
+                          <div className="flex flex-col gap-1">
+                            <div className="flex justify-between text-xs text-textMuted">
+                              <span>Tamaño (Escala)</span>
+                              <span className="font-mono bg-black/50 px-1 rounded">{Math.round(state.sponsorScale * 100)}%</span>
+                            </div>
+                            <input type="range" min="0.1" max="3" step="0.05" value={state.sponsorScale} onChange={(e) => updateField('sponsorScale', Number(e.target.value))} className="w-full accent-blue-500" />
+                          </div>
                         </div>
-                        <input type="range" min="-1000" max="1000" value={state.sponsorOffsetX} onChange={(e) => updateField('sponsorOffsetX', Number(e.target.value))} className="w-full accent-blue-500" />
                       </div>
-                      <div className="flex flex-col gap-1">
-                        <div className="flex justify-between text-xs text-textMuted">
-                          <span>Posición Vertical (Y)</span>
-                          <span className="font-mono bg-black/50 px-1 rounded">{state.sponsorOffsetY}px</span>
-                        </div>
-                        <input type="range" min="-1000" max="1000" value={state.sponsorOffsetY} onChange={(e) => updateField('sponsorOffsetY', Number(e.target.value))} className="w-full accent-blue-500" />
-                      </div>
-                      <div className="flex flex-col gap-1">
-                        <div className="flex justify-between text-xs text-textMuted">
-                          <span>Tamaño (Escala)</span>
-                          <span className="font-mono bg-black/50 px-1 rounded">{Math.round(state.sponsorScale * 100)}%</span>
-                        </div>
-                        <input type="range" min="0.1" max="3" step="0.05" value={state.sponsorScale} onChange={(e) => updateField('sponsorScale', Number(e.target.value))} className="w-full accent-blue-500" />
-                      </div>
-                    </div>
+                    )}
                   </div>
 
-                  <div className="card p-5 bg-surfaceHover border-blue-500/20 shadow-md">
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-xs font-bold uppercase tracking-wider text-blue-400 flex items-center gap-2">
-                        <Settings className="w-4 h-4" />
-                        Banner Inferior
-                      </h3>
-                      <button 
-                        onClick={() => updateField('isAdVisible', !state.isAdVisible)}
-                        className={`text-[10px] px-2 py-1 rounded font-bold ${state.isAdVisible ? 'bg-green-600 hover:bg-green-500' : 'bg-red-600 hover:bg-red-500'}`}
-                      >
-                        {state.isAdVisible ? <><Eye className="w-3 h-3 inline mr-1" /> Visible</> : <><EyeOff className="w-3 h-3 inline mr-1" /> Oculto</>}
-                      </button>
-                    </div>
-                    <div className="space-y-3">
-                      <div>
-                        <label className="text-xs text-textMuted mb-1 block">Título Principal</label>
-                        <input type="text" value={state.adTitle} onChange={(e) => updateField('adTitle', e.target.value)} className="w-full bg-background border border-border rounded-lg p-2 text-white" />
+                  {/* BANNER INFERIOR */}
+                  <div className="card overflow-hidden bg-surfaceHover border border-blue-500/20 shadow-md transition-all">
+                    <div 
+                      className="p-4 flex items-center justify-between cursor-pointer hover:bg-white/[0.04] transition-colors select-none group"
+                      onClick={() => toggleSection('banner')}
+                    >
+                      <div className="flex items-center gap-2">
+                        <Settings className="w-4 h-4 text-blue-400" />
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-blue-400">
+                          Banner Inferior
+                        </h3>
                       </div>
-                      <div>
-                        <label className="text-xs text-textMuted mb-1 block">Subtítulo (Resaltado)</label>
-                        <input type="text" value={state.adSubtitle} onChange={(e) => updateField('adSubtitle', e.target.value)} className="w-full bg-background border border-border rounded-lg p-2 text-white" />
-                      </div>
-                      <div>
-                        <label className="text-xs text-textMuted mb-1 block">Descripción</label>
-                        <input type="text" value={state.adText} onChange={(e) => updateField('adText', e.target.value)} className="w-full bg-background border border-border rounded-lg p-2 text-white" />
-                      </div>
-                      <div>
-                        <label className="text-xs text-textMuted mb-1 block">WhatsApp (Solo números con código de país)</label>
-                        <input type="text" value={state.adPhone} onChange={(e) => updateField('adPhone', e.target.value)} className="w-full bg-background border border-border rounded-lg p-2 text-white" placeholder="51983032706" />
+                      <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                        <button 
+                          onClick={() => updateField('isAdVisible', !state.isAdVisible)}
+                          className={`text-[10px] px-2.5 py-1 rounded font-bold transition-all shadow-sm flex items-center gap-1 ${state.isAdVisible ? 'bg-green-600 hover:bg-green-500 text-white' : 'bg-red-600 hover:bg-red-500 text-white'}`}
+                        >
+                          {state.isAdVisible ? <><Eye className="w-3 h-3 inline mr-1" /> Visible</> : <><EyeOff className="w-3 h-3 inline mr-1" /> Oculto</>}
+                        </button>
+                        <button 
+                          type="button"
+                          onClick={() => toggleSection('banner')}
+                          className="p-1 text-textMuted group-hover:text-white hover:bg-white/10 rounded transition-colors"
+                          title={openSections.banner ? 'Colapsar opción' : 'Expandir opción'}
+                        >
+                          {openSections.banner ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                        </button>
                       </div>
                     </div>
 
-                    {/* Mandos de Posición */}
-                    <div className="mt-4 pt-4 border-t border-white/5 space-y-3">
-                      <div className="flex flex-col gap-1">
-                        <div className="flex justify-between text-xs text-textMuted">
-                          <span>Posición Horizontal (X)</span>
-                          <span className="font-mono bg-black/50 px-1 rounded">{state.adOffsetX}px</span>
+                    {openSections.banner && (
+                      <div className="p-4 pt-0 border-t border-white/5 space-y-4 mt-1 pt-4">
+                        <div className="space-y-3">
+                          <div>
+                            <label className="text-xs text-textMuted mb-1 block">Título Principal</label>
+                            <input type="text" value={state.adTitle} onChange={(e) => updateField('adTitle', e.target.value)} className="w-full bg-background border border-border rounded-lg p-2 text-white" />
+                          </div>
+                          <div>
+                            <label className="text-xs text-textMuted mb-1 block">Subtítulo (Resaltado)</label>
+                            <input type="text" value={state.adSubtitle} onChange={(e) => updateField('adSubtitle', e.target.value)} className="w-full bg-background border border-border rounded-lg p-2 text-white" />
+                          </div>
+                          <div>
+                            <label className="text-xs text-textMuted mb-1 block">Descripción</label>
+                            <input type="text" value={state.adText} onChange={(e) => updateField('adText', e.target.value)} className="w-full bg-background border border-border rounded-lg p-2 text-white" />
+                          </div>
+                          <div>
+                            <label className="text-xs text-textMuted mb-1 block">WhatsApp (Solo números con código de país)</label>
+                            <input type="text" value={state.adPhone} onChange={(e) => updateField('adPhone', e.target.value)} className="w-full bg-background border border-border rounded-lg p-2 text-white" placeholder="51983032706" />
+                          </div>
                         </div>
-                        <input type="range" min="-1000" max="1000" value={state.adOffsetX} onChange={(e) => updateField('adOffsetX', Number(e.target.value))} className="w-full accent-blue-500" />
-                      </div>
-                      <div className="flex flex-col gap-1">
-                        <div className="flex justify-between text-xs text-textMuted">
-                          <span>Posición Vertical (Y)</span>
-                          <span className="font-mono bg-black/50 px-1 rounded">{state.adOffsetY}px</span>
+
+                        {/* Mandos de Posición */}
+                        <div className="mt-4 pt-4 border-t border-white/5 space-y-3">
+                          <div className="flex flex-col gap-1">
+                            <div className="flex justify-between text-xs text-textMuted">
+                              <span>Posición Horizontal (X)</span>
+                              <span className="font-mono bg-black/50 px-1 rounded">{state.adOffsetX}px</span>
+                            </div>
+                            <input type="range" min="-1000" max="1000" value={state.adOffsetX} onChange={(e) => updateField('adOffsetX', Number(e.target.value))} className="w-full accent-blue-500" />
+                          </div>
+                          <div className="flex flex-col gap-1">
+                            <div className="flex justify-between text-xs text-textMuted">
+                              <span>Posición Vertical (Y)</span>
+                              <span className="font-mono bg-black/50 px-1 rounded">{state.adOffsetY}px</span>
+                            </div>
+                            <input type="range" min="-1000" max="1000" value={state.adOffsetY} onChange={(e) => updateField('adOffsetY', Number(e.target.value))} className="w-full accent-blue-500" />
+                          </div>
+                          <div className="flex flex-col gap-1">
+                            <div className="flex justify-between text-xs text-textMuted">
+                              <span>Tamaño (Escala)</span>
+                              <span className="font-mono bg-black/50 px-1 rounded">{Math.round(state.adScale * 100)}%</span>
+                            </div>
+                            <input type="range" min="0.1" max="3" step="0.05" value={state.adScale} onChange={(e) => updateField('adScale', Number(e.target.value))} className="w-full accent-blue-500" />
+                          </div>
                         </div>
-                        <input type="range" min="-1000" max="1000" value={state.adOffsetY} onChange={(e) => updateField('adOffsetY', Number(e.target.value))} className="w-full accent-blue-500" />
                       </div>
-                      <div className="flex flex-col gap-1">
-                        <div className="flex justify-between text-xs text-textMuted">
-                          <span>Tamaño (Escala)</span>
-                          <span className="font-mono bg-black/50 px-1 rounded">{Math.round(state.adScale * 100)}%</span>
-                        </div>
-                        <input type="range" min="0.1" max="3" step="0.05" value={state.adScale} onChange={(e) => updateField('adScale', Number(e.target.value))} className="w-full accent-blue-500" />
-                      </div>
-                    </div>
+                    )}
                   </div>
 
                   {/* CINTA INFERIOR (TICKER) */}
-                  <div className="card p-5 bg-surfaceHover border-blue-500/20 shadow-md">
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-xs font-bold uppercase tracking-wider text-blue-400 flex items-center gap-2">
-                        <Settings className="w-4 h-4" />
-                        Cinta Inferior (Ticker)
-                      </h3>
-                      <button 
-                        onClick={() => updateField('isTickerVisible', !state.isTickerVisible)}
-                        className={`text-[10px] px-2 py-1 rounded font-bold ${state.isTickerVisible ? 'bg-green-600 hover:bg-green-500' : 'bg-red-600 hover:bg-red-500'}`}
-                      >
-                        {state.isTickerVisible ? <><Eye className="w-3 h-3 inline mr-1" /> Visible</> : <><EyeOff className="w-3 h-3 inline mr-1" /> Oculto</>}
-                      </button>
-                    </div>
-                    <div className="space-y-3">
-                      <div>
-                        <label className="text-xs text-textMuted mb-1 block">Texto de Noticias/Agradecimientos</label>
-                        <input type="text" value={state.tickerText} onChange={(e) => updateField('tickerText', e.target.value)} className="w-full bg-background border border-border rounded-lg p-2 text-white" />
+                  <div className="card overflow-hidden bg-surfaceHover border border-blue-500/20 shadow-md transition-all">
+                    <div 
+                      className="p-4 flex items-center justify-between cursor-pointer hover:bg-white/[0.04] transition-colors select-none group"
+                      onClick={() => toggleSection('ticker')}
+                    >
+                      <div className="flex items-center gap-2">
+                        <Settings className="w-4 h-4 text-blue-400" />
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-blue-400">
+                          Cinta Inferior (Ticker)
+                        </h3>
+                      </div>
+                      <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                        <button 
+                          onClick={() => updateField('isTickerVisible', !state.isTickerVisible)}
+                          className={`text-[10px] px-2.5 py-1 rounded font-bold transition-all shadow-sm flex items-center gap-1 ${state.isTickerVisible ? 'bg-green-600 hover:bg-green-500 text-white' : 'bg-red-600 hover:bg-red-500 text-white'}`}
+                        >
+                          {state.isTickerVisible ? <><Eye className="w-3 h-3 inline mr-1" /> Visible</> : <><EyeOff className="w-3 h-3 inline mr-1" /> Oculto</>}
+                        </button>
+                        <button 
+                          type="button"
+                          onClick={() => toggleSection('ticker')}
+                          className="p-1 text-textMuted group-hover:text-white hover:bg-white/10 rounded transition-colors"
+                          title={openSections.ticker ? 'Colapsar opción' : 'Expandir opción'}
+                        >
+                          {openSections.ticker ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                        </button>
                       </div>
                     </div>
-                    {/* Mandos de Posición */}
-                    <div className="mt-4 pt-4 border-t border-white/5 space-y-3">
-                      <div className="flex flex-col gap-1">
-                        <div className="flex justify-between text-xs text-textMuted">
-                          <span>Posición Horizontal (X)</span>
-                          <span className="font-mono bg-black/50 px-1 rounded">{state.tickerOffsetX}px</span>
+
+                    {openSections.ticker && (
+                      <div className="p-4 pt-0 border-t border-white/5 space-y-4 mt-1 pt-4">
+                        <div className="space-y-3">
+                          <div>
+                            <label className="text-xs text-textMuted mb-1 block">Texto de Noticias/Agradecimientos</label>
+                            <input type="text" value={state.tickerText} onChange={(e) => updateField('tickerText', e.target.value)} className="w-full bg-background border border-border rounded-lg p-2 text-white" />
+                          </div>
                         </div>
-                        <input type="range" min="-1000" max="1000" value={state.tickerOffsetX} onChange={(e) => updateField('tickerOffsetX', Number(e.target.value))} className="w-full accent-blue-500" />
-                      </div>
-                      <div className="flex flex-col gap-1">
-                        <div className="flex justify-between text-xs text-textMuted">
-                          <span>Posición Vertical (Y)</span>
-                          <span className="font-mono bg-black/50 px-1 rounded">{state.tickerOffsetY}px</span>
+
+                        {/* Mandos de Posición */}
+                        <div className="mt-4 pt-4 border-t border-white/5 space-y-3">
+                          <div className="flex flex-col gap-1">
+                            <div className="flex justify-between text-xs text-textMuted">
+                              <span>Posición Horizontal (X)</span>
+                              <span className="font-mono bg-black/50 px-1 rounded">{state.tickerOffsetX}px</span>
+                            </div>
+                            <input type="range" min="-1000" max="1000" value={state.tickerOffsetX} onChange={(e) => updateField('tickerOffsetX', Number(e.target.value))} className="w-full accent-blue-500" />
+                          </div>
+                          <div className="flex flex-col gap-1">
+                            <div className="flex justify-between text-xs text-textMuted">
+                              <span>Posición Vertical (Y)</span>
+                              <span className="font-mono bg-black/50 px-1 rounded">{state.tickerOffsetY}px</span>
+                            </div>
+                            <input type="range" min="-1000" max="1000" value={state.tickerOffsetY} onChange={(e) => updateField('tickerOffsetY', Number(e.target.value))} className="w-full accent-blue-500" />
+                          </div>
+                          <div className="flex flex-col gap-1">
+                            <div className="flex justify-between text-xs text-textMuted">
+                              <span>Tamaño (Escala)</span>
+                              <span className="font-mono bg-black/50 px-1 rounded">{Math.round(state.tickerScale * 100)}%</span>
+                            </div>
+                            <input type="range" min="0.1" max="3" step="0.05" value={state.tickerScale} onChange={(e) => updateField('tickerScale', Number(e.target.value))} className="w-full accent-blue-500" />
+                          </div>
                         </div>
-                        <input type="range" min="-1000" max="1000" value={state.tickerOffsetY} onChange={(e) => updateField('tickerOffsetY', Number(e.target.value))} className="w-full accent-blue-500" />
                       </div>
-                      <div className="flex flex-col gap-1">
-                        <div className="flex justify-between text-xs text-textMuted">
-                          <span>Tamaño (Escala)</span>
-                          <span className="font-mono bg-black/50 px-1 rounded">{Math.round(state.tickerScale * 100)}%</span>
-                        </div>
-                        <input type="range" min="0.1" max="3" step="0.05" value={state.tickerScale} onChange={(e) => updateField('tickerScale', Number(e.target.value))} className="w-full accent-blue-500" />
-                      </div>
-                    </div>
+                    )}
                   </div>
 
                   {/* POP-UP LATERAL */}
-                  <div className="card p-5 bg-surfaceHover border-blue-500/20 shadow-md">
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-xs font-bold uppercase tracking-wider text-blue-400 flex items-center gap-2">
-                        <ImageIcon className="w-4 h-4" />
-                        Pop-up Lateral (Promo)
-                      </h3>
-                      <button 
-                        onClick={() => updateField('isPopupVisible', !state.isPopupVisible)}
-                        className={`text-[10px] px-2 py-1 rounded font-bold ${state.isPopupVisible ? 'bg-green-600 hover:bg-green-500' : 'bg-red-600 hover:bg-red-500'}`}
-                      >
-                        {state.isPopupVisible ? <><Eye className="w-3 h-3 inline mr-1" /> Visible</> : <><EyeOff className="w-3 h-3 inline mr-1" /> Oculto</>}
-                      </button>
+                  <div className="card overflow-hidden bg-surfaceHover border border-blue-500/20 shadow-md transition-all">
+                    <div 
+                      className="p-4 flex items-center justify-between cursor-pointer hover:bg-white/[0.04] transition-colors select-none group"
+                      onClick={() => toggleSection('popup')}
+                    >
+                      <div className="flex items-center gap-2">
+                        <ImageIcon className="w-4 h-4 text-blue-400" />
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-blue-400">
+                          Pop-up Lateral (Promo)
+                        </h3>
+                      </div>
+                      <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                        <button 
+                          onClick={() => updateField('isPopupVisible', !state.isPopupVisible)}
+                          className={`text-[10px] px-2.5 py-1 rounded font-bold transition-all shadow-sm flex items-center gap-1 ${state.isPopupVisible ? 'bg-green-600 hover:bg-green-500 text-white' : 'bg-red-600 hover:bg-red-500 text-white'}`}
+                        >
+                          {state.isPopupVisible ? <><Eye className="w-3 h-3 inline mr-1" /> Visible</> : <><EyeOff className="w-3 h-3 inline mr-1" /> Oculto</>}
+                        </button>
+                        <button 
+                          type="button"
+                          onClick={() => toggleSection('popup')}
+                          className="p-1 text-textMuted group-hover:text-white hover:bg-white/10 rounded transition-colors"
+                          title={openSections.popup ? 'Colapsar opción' : 'Expandir opción'}
+                        >
+                          {openSections.popup ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                        </button>
+                      </div>
                     </div>
                     
-                    <div className="flex items-center gap-4 mb-4">
-                      {state.popupImage ? (
-                        <img src={state.popupImage} alt="Popup" className="w-16 h-16 object-cover bg-black/50 p-1 rounded-lg border border-white/10" />
-                      ) : (
-                        <div className="w-16 h-16 bg-white/5 rounded-lg flex items-center justify-center border border-white/5">
-                          <ImageIcon className="w-6 h-6 text-white/20" />
+                    {openSections.popup && (
+                      <div className="p-4 pt-0 border-t border-white/5 space-y-4 mt-1 pt-4">
+                        <div className="flex items-center gap-4 mb-4">
+                          {state.popupImage ? (
+                            <img src={state.popupImage} alt="Popup" className="w-16 h-16 object-cover bg-black/50 p-1 rounded-lg border border-white/10" />
+                          ) : (
+                            <div className="w-16 h-16 bg-white/5 rounded-lg flex items-center justify-center border border-white/5">
+                              <ImageIcon className="w-6 h-6 text-white/20" />
+                            </div>
+                          )}
+                          <input 
+                            type="file" 
+                            accept="image/*" 
+                            id="popupImageInput" 
+                            className="hidden" 
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                const reader = new FileReader();
+                                reader.onloadend = () => updateField('popupImage', reader.result);
+                                reader.readAsDataURL(file);
+                              }
+                            }} 
+                          />
+                          <label htmlFor="popupImageInput" className="bg-white/10 hover:bg-white/20 px-4 py-2 rounded-lg text-xs font-bold cursor-pointer transition-colors text-white">
+                            Subir Imagen
+                          </label>
                         </div>
-                      )}
-                      <input 
-                        type="file" 
-                        accept="image/*" 
-                        id="popupImageInput" 
-                        className="hidden" 
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) {
-                            const reader = new FileReader();
-                            reader.onloadend = () => updateField('popupImage', reader.result);
-                            reader.readAsDataURL(file);
-                          }
-                        }} 
-                      />
-                      <label htmlFor="popupImageInput" className="bg-white/10 hover:bg-white/20 px-4 py-2 rounded-lg text-xs font-bold cursor-pointer transition-colors text-white">
-                        Subir Imagen
-                      </label>
-                    </div>
 
-                    <div className="space-y-3">
-                      <div>
-                        <label className="text-xs text-textMuted mb-1 block">Texto de la Promoción</label>
-                        <input type="text" value={state.popupText} onChange={(e) => updateField('popupText', e.target.value)} className="w-full bg-background border border-border rounded-lg p-2 text-white" />
-                      </div>
-                    </div>
+                        <div className="space-y-3">
+                          <div>
+                            <label className="text-xs text-textMuted mb-1 block">Texto de la Promoción</label>
+                            <input type="text" value={state.popupText} onChange={(e) => updateField('popupText', e.target.value)} className="w-full bg-background border border-border rounded-lg p-2 text-white" />
+                          </div>
+                        </div>
 
-                    {/* Mandos de Posición */}
-                    <div className="mt-4 pt-4 border-t border-white/5 space-y-3">
-                      <div className="flex flex-col gap-1">
-                        <div className="flex justify-between text-xs text-textMuted">
-                          <span>Posición Horizontal (X)</span>
-                          <span className="font-mono bg-black/50 px-1 rounded">{state.popupOffsetX}px</span>
+                        {/* Mandos de Posición */}
+                        <div className="mt-4 pt-4 border-t border-white/5 space-y-3">
+                          <div className="flex flex-col gap-1">
+                            <div className="flex justify-between text-xs text-textMuted">
+                              <span>Posición Horizontal (X)</span>
+                              <span className="font-mono bg-black/50 px-1 rounded">{state.popupOffsetX}px</span>
+                            </div>
+                            <input type="range" min="-1000" max="1000" value={state.popupOffsetX} onChange={(e) => updateField('popupOffsetX', Number(e.target.value))} className="w-full accent-blue-500" />
+                          </div>
+                          <div className="flex flex-col gap-1">
+                            <div className="flex justify-between text-xs text-textMuted">
+                              <span>Posición Vertical (Y)</span>
+                              <span className="font-mono bg-black/50 px-1 rounded">{state.popupOffsetY}px</span>
+                            </div>
+                            <input type="range" min="-1000" max="1000" value={state.popupOffsetY} onChange={(e) => updateField('popupOffsetY', Number(e.target.value))} className="w-full accent-blue-500" />
+                          </div>
+                          <div className="flex flex-col gap-1">
+                            <div className="flex justify-between text-xs text-textMuted">
+                              <span>Tamaño (Escala)</span>
+                              <span className="font-mono bg-black/50 px-1 rounded">{Math.round(state.popupScale * 100)}%</span>
+                            </div>
+                            <input type="range" min="0.1" max="3" step="0.05" value={state.popupScale} onChange={(e) => updateField('popupScale', Number(e.target.value))} className="w-full accent-blue-500" />
+                          </div>
                         </div>
-                        <input type="range" min="-1000" max="1000" value={state.popupOffsetX} onChange={(e) => updateField('popupOffsetX', Number(e.target.value))} className="w-full accent-blue-500" />
                       </div>
-                      <div className="flex flex-col gap-1">
-                        <div className="flex justify-between text-xs text-textMuted">
-                          <span>Posición Vertical (Y)</span>
-                          <span className="font-mono bg-black/50 px-1 rounded">{state.popupOffsetY}px</span>
-                        </div>
-                        <input type="range" min="-1000" max="1000" value={state.popupOffsetY} onChange={(e) => updateField('popupOffsetY', Number(e.target.value))} className="w-full accent-blue-500" />
-                      </div>
-                      <div className="flex flex-col gap-1">
-                        <div className="flex justify-between text-xs text-textMuted">
-                          <span>Tamaño (Escala)</span>
-                          <span className="font-mono bg-black/50 px-1 rounded">{Math.round(state.popupScale * 100)}%</span>
-                        </div>
-                        <input type="range" min="0.1" max="3" step="0.05" value={state.popupScale} onChange={(e) => updateField('popupScale', Number(e.target.value))} className="w-full accent-blue-500" />
-                      </div>
-                    </div>
+                    )}
                   </div>
                 </section>
               )}
 
               {/* CONTROLES DE ALINEACIÓN (LINEUP) */}
               {isLineupProject && (
-                <section className="card p-5 bg-surfaceHover border-white/5 shadow-md">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-textMuted mb-4">Equipo a Mostrar en Pantalla</h3>
-                  <div className="flex gap-2">
-                    <button onClick={() => updateField('lineupTeamVisible', 'home')} className={`flex-1 py-2 rounded font-bold ${state.lineupTeamVisible === 'home' ? 'bg-primary text-white' : 'bg-white/10 text-textMuted hover:bg-white/20'}`}>Local ({state.homeName})</button>
-                    <button onClick={() => updateField('lineupTeamVisible', 'away')} className={`flex-1 py-2 rounded font-bold ${state.lineupTeamVisible === 'away' ? 'bg-primary text-white' : 'bg-white/10 text-textMuted hover:bg-white/20'}`}>Visitante ({state.awayName})</button>
+                <section className="card overflow-hidden bg-surfaceHover border border-white/5 shadow-md transition-all">
+                  <div 
+                    className="p-4 flex items-center justify-between cursor-pointer hover:bg-white/[0.04] transition-colors select-none group"
+                    onClick={() => toggleSection('lineupTeam')}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Trophy className="w-4 h-4 text-textMuted" />
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-textMuted">
+                        Equipo a Mostrar en Pantalla
+                      </h3>
+                    </div>
+                    <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex gap-1">
+                        <button 
+                          onClick={() => updateField('lineupTeamVisible', 'home')} 
+                          className={`text-[10px] px-2 py-0.5 rounded font-bold uppercase transition-colors ${state.lineupTeamVisible === 'home' ? 'bg-primary text-white shadow' : 'bg-white/10 text-textMuted hover:bg-white/20'}`}
+                        >
+                          {state.homeName}
+                        </button>
+                        <button 
+                          onClick={() => updateField('lineupTeamVisible', 'away')} 
+                          className={`text-[10px] px-2 py-0.5 rounded font-bold uppercase transition-colors ${state.lineupTeamVisible === 'away' ? 'bg-primary text-white shadow' : 'bg-white/10 text-textMuted hover:bg-white/20'}`}
+                        >
+                          {state.awayName}
+                        </button>
+                      </div>
+                      <button 
+                        type="button"
+                        onClick={() => toggleSection('lineupTeam')}
+                        className="p-1 text-textMuted group-hover:text-white hover:bg-white/10 rounded transition-colors"
+                        title={openSections.lineupTeam ? 'Colapsar opción' : 'Expandir opción'}
+                      >
+                        {openSections.lineupTeam ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                      </button>
+                    </div>
                   </div>
+
+                  {openSections.lineupTeam && (
+                    <div className="p-4 pt-0 border-t border-white/5 mt-1 pt-4">
+                      <div className="flex gap-2">
+                        <button onClick={() => updateField('lineupTeamVisible', 'home')} className={`flex-1 py-2 rounded font-bold ${state.lineupTeamVisible === 'home' ? 'bg-primary text-white' : 'bg-white/10 text-textMuted hover:bg-white/20'}`}>Local ({state.homeName})</button>
+                        <button onClick={() => updateField('lineupTeamVisible', 'away')} className={`flex-1 py-2 rounded font-bold ${state.lineupTeamVisible === 'away' ? 'bg-primary text-white' : 'bg-white/10 text-textMuted hover:bg-white/20'}`}>Visitante ({state.awayName})</button>
+                      </div>
+                    </div>
+                  )}
                 </section>
               )}
 
               {/* CONTROLES DE MARCADOR (SCOREBOARD) */}
               {isScoreboardProject && (
                 <>
-                  <section className="card p-5 bg-surfaceHover border-white/5 shadow-md">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-textMuted mb-4">Reloj de Juego</h3>
-                    <div className="flex flex-col items-center gap-4">
-                      <div className="text-5xl font-mono font-black text-white bg-black/50 px-6 py-3 rounded-xl border border-white/10 shadow-inner">
-                        {formatTime(state.timerElapsed)}
+                  <section className="card overflow-hidden bg-surfaceHover border border-white/5 shadow-md transition-all">
+                    <div 
+                      className="p-4 flex items-center justify-between cursor-pointer hover:bg-white/[0.04] transition-colors select-none group"
+                      onClick={() => toggleSection('clock')}
+                    >
+                      <div className="flex items-center gap-2">
+                        <Play className="w-4 h-4 text-textMuted" />
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-textMuted">
+                          Reloj de Juego
+                        </h3>
                       </div>
-                      <div className="flex w-full gap-2">
+                      <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                        <span className="text-xs font-mono font-bold bg-black/60 px-2 py-0.5 rounded border border-white/10 text-white">
+                          {formatTime(state.timerElapsed)}
+                        </span>
                         {!state.timerIsRunning ? (
-                          <button onClick={() => updateField('timerIsRunning', true)} className="flex-1 bg-green-600 hover:bg-green-500 text-white font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-2">
-                            <Play className="w-4 h-4" /> Jugar
+                          <button onClick={() => updateField('timerIsRunning', true)} className="text-[10px] px-2.5 py-1 rounded font-bold bg-green-600 hover:bg-green-500 text-white flex items-center gap-1 shadow-sm">
+                            <Play className="w-3 h-3" /> Jugar
                           </button>
                         ) : (
-                          <button onClick={() => updateField('timerIsRunning', false)} className="flex-1 bg-amber-600 hover:bg-amber-500 text-white font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-2">
-                            <Square className="w-4 h-4" /> Pausar
+                          <button onClick={() => updateField('timerIsRunning', false)} className="text-[10px] px-2.5 py-1 rounded font-bold bg-amber-600 hover:bg-amber-500 text-white flex items-center gap-1 shadow-sm">
+                            <Square className="w-3 h-3" /> Pausar
                           </button>
                         )}
-                        <button onClick={() => updateField('timerElapsed', 0)} className="bg-surface border border-border hover:bg-surfaceHover text-white py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2">
-                          <RotateCcw className="w-4 h-4" /> Reset
+                        <button 
+                          type="button"
+                          onClick={() => toggleSection('clock')}
+                          className="p-1 text-textMuted group-hover:text-white hover:bg-white/10 rounded transition-colors"
+                          title={openSections.clock ? 'Colapsar opción' : 'Expandir opción'}
+                        >
+                          {openSections.clock ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                         </button>
                       </div>
                     </div>
+
+                    {openSections.clock && (
+                      <div className="p-4 pt-0 border-t border-white/5 mt-1 pt-4">
+                        <div className="flex flex-col items-center gap-4">
+                          <div className="text-5xl font-mono font-black text-white bg-black/50 px-6 py-3 rounded-xl border border-white/10 shadow-inner">
+                            {formatTime(state.timerElapsed)}
+                          </div>
+                          <div className="flex w-full gap-2">
+                            {!state.timerIsRunning ? (
+                              <button onClick={() => updateField('timerIsRunning', true)} className="flex-1 bg-green-600 hover:bg-green-500 text-white font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-2">
+                                <Play className="w-4 h-4" /> Jugar
+                              </button>
+                            ) : (
+                              <button onClick={() => updateField('timerIsRunning', false)} className="flex-1 bg-amber-600 hover:bg-amber-500 text-white font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-2">
+                                <Square className="w-4 h-4" /> Pausar
+                              </button>
+                            )}
+                            <button onClick={() => updateField('timerElapsed', 0)} className="bg-surface border border-border hover:bg-surfaceHover text-white py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2">
+                              <RotateCcw className="w-4 h-4" /> Reset
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </section>
 
-                  <section className="space-y-4">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-textMuted flex items-center gap-2">
-                      <Trophy className="w-4 h-4"/> Marcador
-                    </h3>
-                    
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="card p-4 space-y-3 bg-surfaceHover border-primary/20 shadow-md">
-                        <div className="text-xs text-textMuted font-bold text-center">LOCAL ({state.homeName})</div>
-                        <div className="flex items-center justify-between bg-background rounded-lg p-1 border border-border">
-                          <button onClick={() => updateField('homeScore', Math.max(0, state.homeScore - 1))} className="p-3 hover:text-primary transition-colors"><Minus className="w-5 h-5"/></button>
-                          <span className="font-bold text-3xl">{state.homeScore}</span>
-                          <button onClick={() => updateField('homeScore', state.homeScore + 1)} className="p-3 hover:text-primary transition-colors"><Plus className="w-5 h-5"/></button>
-                        </div>
-                        <button onClick={() => triggerGoal('home')} className="w-full btn-primary bg-green-600 hover:bg-green-500 py-2 text-sm font-bold shadow-lg shadow-green-900/50">¡GOL LOCAL!</button>
+                  <section className="card overflow-hidden bg-surfaceHover border border-white/5 shadow-md transition-all">
+                    <div 
+                      className="p-4 flex items-center justify-between cursor-pointer hover:bg-white/[0.04] transition-colors select-none group"
+                      onClick={() => toggleSection('score')}
+                    >
+                      <div className="flex items-center gap-2">
+                        <Trophy className="w-4 h-4 text-textMuted" />
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-textMuted">
+                          Marcador
+                        </h3>
                       </div>
-
-                      <div className="card p-4 space-y-3 bg-surfaceHover border-red-500/20 shadow-md">
-                        <div className="text-xs text-textMuted font-bold text-center">VISITANTE ({state.awayName})</div>
-                        <div className="flex items-center justify-between bg-background rounded-lg p-1 border border-border">
-                          <button onClick={() => updateField('awayScore', Math.max(0, state.awayScore - 1))} className="p-3 hover:text-red-500 transition-colors"><Minus className="w-5 h-5"/></button>
-                          <span className="font-bold text-3xl">{state.awayScore}</span>
-                          <button onClick={() => updateField('awayScore', state.awayScore + 1)} className="p-3 hover:text-red-500 transition-colors"><Plus className="w-5 h-5"/></button>
-                        </div>
-                        <button onClick={() => triggerGoal('away')} className="w-full btn-primary bg-red-600 hover:bg-red-500 py-2 text-sm font-bold shadow-lg shadow-red-900/50">¡GOL VISITANTE!</button>
+                      <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                        <span className="text-xs font-bold font-mono bg-black/60 px-2.5 py-0.5 rounded border border-white/10 text-white flex items-center gap-1.5">
+                          <span className="text-emerald-400">{state.homeName} {state.homeScore}</span>
+                          <span className="text-white/40">-</span>
+                          <span className="text-rose-400">{state.awayScore} {state.awayName}</span>
+                        </span>
+                        <button 
+                          type="button"
+                          onClick={() => toggleSection('score')}
+                          className="p-1 text-textMuted group-hover:text-white hover:bg-white/10 rounded transition-colors"
+                          title={openSections.score ? 'Colapsar opción' : 'Expandir opción'}
+                        >
+                          {openSections.score ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                        </button>
                       </div>
                     </div>
                     
-                    {/* Botón Especial: Replay / Destacado */}
-                    <div className="card p-4 bg-gradient-to-r from-yellow-600/20 to-yellow-800/20 border-yellow-500/30 shadow-lg">
-                      <h3 className="text-xs font-bold uppercase tracking-wider text-yellow-500 mb-3 flex items-center gap-2">
-                        <Play className="w-4 h-4" />
-                        Efecto Destacado
-                      </h3>
-                      <button 
-                        onClick={triggerReplay}
-                        disabled={state.isReplayActive}
-                        className={`w-full py-3 rounded-lg font-bold italic tracking-widest text-lg uppercase transition-all shadow-xl flex items-center justify-center gap-2 ${state.isReplayActive ? 'bg-gray-600 text-gray-400 cursor-not-allowed' : 'bg-gradient-to-r from-yellow-500 to-yellow-600 hover:to-yellow-500 text-black border-2 border-yellow-400 hover:scale-[1.02]'}`}
-                      >
-                        <Trophy className="w-5 h-5" />
-                        {state.isReplayActive ? 'Reproduciendo...' : 'Lanzar Replay'}
-                      </button>
-                    </div>
+                    {openSections.score && (
+                      <div className="p-4 pt-0 border-t border-white/5 mt-1 pt-4">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="card p-4 space-y-3 bg-surface border-primary/20 shadow-md">
+                            <div className="text-xs text-textMuted font-bold text-center">LOCAL ({state.homeName})</div>
+                            <div className="flex items-center justify-between bg-background rounded-lg p-1 border border-border">
+                              <button onClick={() => updateField('homeScore', Math.max(0, state.homeScore - 1))} className="p-3 hover:text-primary transition-colors"><Minus className="w-5 h-5"/></button>
+                              <span className="font-bold text-3xl">{state.homeScore}</span>
+                              <button onClick={() => updateField('homeScore', state.homeScore + 1)} className="p-3 hover:text-primary transition-colors"><Plus className="w-5 h-5"/></button>
+                            </div>
+                            <button onClick={() => triggerGoal('home')} className="w-full btn-primary bg-green-600 hover:bg-green-500 py-2 text-sm font-bold shadow-lg shadow-green-900/50">¡GOL LOCAL!</button>
+                          </div>
+
+                          <div className="card p-4 space-y-3 bg-surface border-red-500/20 shadow-md">
+                            <div className="text-xs text-textMuted font-bold text-center">VISITANTE ({state.awayName})</div>
+                            <div className="flex items-center justify-between bg-background rounded-lg p-1 border border-border">
+                              <button onClick={() => updateField('awayScore', Math.max(0, state.awayScore - 1))} className="p-3 hover:text-red-500 transition-colors"><Minus className="w-5 h-5"/></button>
+                              <span className="font-bold text-3xl">{state.awayScore}</span>
+                              <button onClick={() => updateField('awayScore', state.awayScore + 1)} className="p-3 hover:text-red-500 transition-colors"><Plus className="w-5 h-5"/></button>
+                            </div>
+                            <button onClick={() => triggerGoal('away')} className="w-full btn-primary bg-red-600 hover:bg-red-500 py-2 text-sm font-bold shadow-lg shadow-red-900/50">¡GOL VISITANTE!</button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </section>
+                  
+                  {/* Botón Especial: Replay / Destacado */}
+                  <div className="card overflow-hidden bg-gradient-to-r from-yellow-600/10 to-yellow-800/10 border border-yellow-500/20 shadow-lg transition-all">
+                    <div 
+                      className="p-4 flex items-center justify-between cursor-pointer hover:bg-white/[0.04] transition-colors select-none group"
+                      onClick={() => toggleSection('replay')}
+                    >
+                      <div className="flex items-center gap-2">
+                        <Play className="w-4 h-4 text-yellow-500" />
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-yellow-500">
+                          Efecto Destacado
+                        </h3>
+                      </div>
+                      <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                        <button 
+                          onClick={triggerReplay}
+                          disabled={state.isReplayActive}
+                          className={`text-xs px-2.5 py-1 rounded font-bold uppercase transition-all shadow-sm flex items-center gap-1.5 ${
+                            state.isReplayActive 
+                              ? 'bg-gray-600 text-gray-400 cursor-not-allowed' 
+                              : 'bg-gradient-to-r from-yellow-500 to-yellow-600 hover:to-yellow-500 text-black border border-yellow-400 hover:scale-105'
+                          }`}
+                        >
+                          <Trophy className="w-3.5 h-3.5" />
+                          {state.isReplayActive ? 'Reproduciendo...' : 'Lanzar Replay'}
+                        </button>
+                        <button 
+                          type="button"
+                          onClick={() => toggleSection('replay')}
+                          className="p-1 text-textMuted group-hover:text-white hover:bg-white/10 rounded transition-colors"
+                          title={openSections.replay ? 'Colapsar opción' : 'Expandir opción'}
+                        >
+                          {openSections.replay ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                        </button>
+                      </div>
+                    </div>
+
+                    {openSections.replay && (
+                      <div className="p-4 pt-0 border-t border-yellow-500/20 mt-1 pt-4">
+                        <button 
+                          onClick={triggerReplay}
+                          disabled={state.isReplayActive}
+                          className={`w-full py-3 rounded-lg font-bold italic tracking-widest text-lg uppercase transition-all shadow-xl flex items-center justify-center gap-2 ${state.isReplayActive ? 'bg-gray-600 text-gray-400 cursor-not-allowed' : 'bg-gradient-to-r from-yellow-500 to-yellow-600 hover:to-yellow-500 text-black border-2 border-yellow-400 hover:scale-[1.02]'}`}
+                        >
+                          <Trophy className="w-5 h-5" />
+                          {state.isReplayActive ? 'Reproduciendo...' : 'Lanzar Replay'}
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </>
               )}
             </>
@@ -881,44 +1142,84 @@ export default function Editor() {
       ) : activeTab === 'personalizar' ? (
             isAdProject ? (
               <div className="space-y-4">
-                <div className="card p-5 bg-surfaceHover border-white/5 shadow-md">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-textMuted mb-4 flex items-center gap-2">
-                    <Settings className="w-4 h-4" /> Comportamiento de Animación
-                  </h3>
-                  <div className="space-y-4">
-                    <div>
-                      <label className="text-xs text-textMuted mb-2 block">Modo de Publicidad</label>
-                      <div className="flex gap-2">
-                        <button onClick={() => updateField('adMode', 'loop')} className={`flex-1 py-2 rounded-lg font-bold text-xs transition-colors ${state.adMode === 'loop' ? 'bg-primary text-white' : 'bg-background border border-border text-textMuted hover:text-white'}`}>Loop Automático</button>
-                        <button onClick={() => updateField('adMode', 'static')} className={`flex-1 py-2 rounded-lg font-bold text-xs transition-colors ${state.adMode === 'static' ? 'bg-primary text-white' : 'bg-background border border-border text-textMuted hover:text-white'}`}>Estático (Siempre visible)</button>
-                      </div>
+                <div className="card overflow-hidden bg-surfaceHover border border-white/5 shadow-md transition-all">
+                  <div 
+                    className="p-4 flex items-center justify-between cursor-pointer hover:bg-white/[0.04] transition-colors select-none group"
+                    onClick={() => toggleSection('adAnimation')}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Settings className="w-4 h-4 text-textMuted" />
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-textMuted">
+                        Comportamiento de Animación
+                      </h3>
                     </div>
-                    
-                    {state.adMode === 'loop' && (
-                      <>
-                        <div>
-                          <label className="text-xs text-textMuted mb-1 block">Tiempo Oculto (segundos)</label>
-                          <input type="number" min="5" value={state.adDurationHidden} onChange={(e) => updateField('adDurationHidden', Number(e.target.value) || 20)} className="w-full bg-background border border-border rounded-lg p-2 text-white" />
-                        </div>
-                        <div>
-                          <label className="text-xs text-textMuted mb-1 block">Tiempo Visible en Pantalla (segundos)</label>
-                          <input type="number" min="5" value={state.adDurationVisible} onChange={(e) => updateField('adDurationVisible', Number(e.target.value) || 10)} className="w-full bg-background border border-border rounded-lg p-2 text-white" />
-                        </div>
-                        <p className="text-[10px] text-textMuted/60 leading-tight">Nota: Los tiempos aplican un ciclo. Ejemplo: Oculto 20s, Visible 10s = Ciclo total de 30 segundos.</p>
-                      </>
-                    )}
+                    <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-white/10 text-white uppercase border border-white/10">
+                        {state.adMode === 'loop' ? 'Loop Automático' : 'Estático'}
+                      </span>
+                      <button 
+                        type="button"
+                        onClick={() => toggleSection('adAnimation')}
+                        className="p-1 text-textMuted group-hover:text-white hover:bg-white/10 rounded transition-colors"
+                        title={openSections.adAnimation ? 'Colapsar opción' : 'Expandir opción'}
+                      >
+                        {openSections.adAnimation ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                      </button>
+                    </div>
                   </div>
+
+                  {openSections.adAnimation && (
+                    <div className="p-4 pt-0 border-t border-white/5 space-y-4 mt-1 pt-4">
+                      <div>
+                        <label className="text-xs text-textMuted mb-2 block">Modo de Publicidad</label>
+                        <div className="flex gap-2">
+                          <button onClick={() => updateField('adMode', 'loop')} className={`flex-1 py-2 rounded-lg font-bold text-xs transition-colors ${state.adMode === 'loop' ? 'bg-primary text-white' : 'bg-background border border-border text-textMuted hover:text-white'}`}>Loop Automático</button>
+                          <button onClick={() => updateField('adMode', 'static')} className={`flex-1 py-2 rounded-lg font-bold text-xs transition-colors ${state.adMode === 'static' ? 'bg-primary text-white' : 'bg-background border border-border text-textMuted hover:text-white'}`}>Estático (Siempre visible)</button>
+                        </div>
+                      </div>
+                      
+                      {state.adMode === 'loop' && (
+                        <>
+                          <div>
+                            <label className="text-xs text-textMuted mb-1 block">Tiempo Oculto (segundos)</label>
+                            <input type="number" min="5" value={state.adDurationHidden} onChange={(e) => updateField('adDurationHidden', Number(e.target.value) || 20)} className="w-full bg-background border border-border rounded-lg p-2 text-white" />
+                          </div>
+                          <div>
+                            <label className="text-xs text-textMuted mb-1 block">Tiempo Visible en Pantalla (segundos)</label>
+                            <input type="number" min="5" value={state.adDurationVisible} onChange={(e) => updateField('adDurationVisible', Number(e.target.value) || 10)} className="w-full bg-background border border-border rounded-lg p-2 text-white" />
+                          </div>
+                          <p className="text-[10px] text-textMuted/60 leading-tight">Nota: Los tiempos aplican un ciclo. Ejemplo: Oculto 20s, Visible 10s = Ciclo total de 30 segundos.</p>
+                        </>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             ) : (
             <div className="space-y-4">
               <div className="card overflow-hidden bg-surfaceHover border border-white/10 shadow-lg">
                 <button 
-                  className="w-full p-4 flex items-center justify-between hover:bg-white/5 transition-colors"
+                  type="button"
+                  className="w-full p-4 flex items-center justify-between hover:bg-white/5 transition-colors cursor-pointer group"
                   onClick={() => setOpenSection(openSection === 'home' ? null : 'home')}
                 >
-                  <span className="font-semibold text-sm">Equipo 1 (Local)</span>
-                  {openSection === 'home' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                  <div className="flex items-center gap-2.5">
+                    <div 
+                      className="w-3.5 h-3.5 rounded-full border border-white/20 shadow-sm shrink-0" 
+                      style={{ backgroundColor: state.homeColor || '#3b82f6' }}
+                    />
+                    <span className="font-semibold text-sm group-hover:text-white transition-colors">
+                      Equipo 1 (Local): <span className="font-black text-primary uppercase ml-1">{state.homeName || 'LOCAL'}</span>
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {state.homeLogo && (
+                      <img src={state.homeLogo} alt="Logo Local" className="w-5 h-5 object-contain rounded bg-white/10 p-0.5" />
+                    )}
+                    <span className="p-1 text-textMuted group-hover:text-white rounded transition-colors">
+                      {openSection === 'home' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                    </span>
+                  </div>
                 </button>
                 
                 {openSection === 'home' && (
@@ -959,11 +1260,27 @@ export default function Editor() {
 
               <div className="card overflow-hidden bg-surfaceHover border border-white/10 shadow-lg">
                 <button 
-                  className="w-full p-4 flex items-center justify-between hover:bg-white/5 transition-colors"
+                  type="button"
+                  className="w-full p-4 flex items-center justify-between hover:bg-white/5 transition-colors cursor-pointer group"
                   onClick={() => setOpenSection(openSection === 'away' ? null : 'away')}
                 >
-                  <span className="font-semibold text-sm">Equipo 2 (Visitante)</span>
-                  {openSection === 'away' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                  <div className="flex items-center gap-2.5">
+                    <div 
+                      className="w-3.5 h-3.5 rounded-full border border-white/20 shadow-sm shrink-0" 
+                      style={{ backgroundColor: state.awayColor || '#ef4444' }}
+                    />
+                    <span className="font-semibold text-sm group-hover:text-white transition-colors">
+                      Equipo 2 (Visitante): <span className="font-black text-primary uppercase ml-1">{state.awayName || 'VISITANTE'}</span>
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {state.awayLogo && (
+                      <img src={state.awayLogo} alt="Logo Visitante" className="w-5 h-5 object-contain rounded bg-white/10 p-0.5" />
+                    )}
+                    <span className="p-1 text-textMuted group-hover:text-white rounded transition-colors">
+                      {openSection === 'away' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                    </span>
+                  </div>
                 </button>
                 
                 {openSection === 'away' && (
@@ -1007,21 +1324,48 @@ export default function Editor() {
           ) : activeTab === 'jugadores' ? (
             <div className="space-y-4">
               
-              <div className="card p-4 bg-surfaceHover border border-white/5 space-y-3 shadow-md">
-                <label className="text-xs text-textMuted block font-bold uppercase tracking-wider">Modalidad de Juego (Ambos Equipos)</label>
-                <select 
-                  className="input-field w-full text-sm font-bold bg-background border-border"
-                  value={state.gameMode}
-                  onChange={(e) => updateField('gameMode', e.target.value as any)}
+              {/* Modalidad de Juego - Colapsable */}
+              <div className="card bg-surfaceHover border border-white/5 shadow-md overflow-hidden">
+                <div 
+                  className="p-3.5 flex items-center justify-between cursor-pointer hover:bg-white/5 transition-colors select-none group"
+                  onClick={() => toggleSection('gameMode')}
                 >
-                  <option value="11">Fútbol 11 (11 Jugadores)</option>
-                  <option value="9">Fútbol 9 (9 Jugadores)</option>
-                  <option value="7">Fútbol 7 (7 Jugadores)</option>
-                  <option value="5">Fútbol 5 / Futsal (5 Jugadores)</option>
-                </select>
+                  <label className="text-xs text-textMuted font-bold uppercase tracking-wider group-hover:text-white transition-colors cursor-pointer">
+                    Modalidad de Juego
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-primary/20 text-primary border border-primary/30">
+                      Fútbol {state.gameMode}
+                    </span>
+                    <button 
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); toggleSection('gameMode'); }}
+                      className="p-1 text-textMuted group-hover:text-white hover:bg-white/10 rounded transition-colors"
+                      title={openSections.gameMode ? 'Colapsar opción' : 'Expandir opción'}
+                    >
+                      {openSections.gameMode ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                {openSections.gameMode && (
+                  <div className="p-4 pt-0 border-t border-white/5 mt-1 pt-3">
+                    <select 
+                      className="input-field w-full text-sm font-bold bg-background border-border"
+                      value={state.gameMode}
+                      onChange={(e) => updateField('gameMode', e.target.value as any)}
+                    >
+                      <option value="11">Fútbol 11 (11 Jugadores)</option>
+                      <option value="9">Fútbol 9 (9 Jugadores)</option>
+                      <option value="7">Fútbol 7 (7 Jugadores)</option>
+                      <option value="5">Fútbol 5 / Futsal (5 Jugadores)</option>
+                    </select>
+                  </div>
+                )}
               </div>
 
-              <div className="flex items-center gap-2 bg-surfaceHover p-1 rounded-lg">
+              {/* Selector de Equipo para Alineación */}
+              <div className="flex items-center gap-2 bg-surfaceHover p-1 rounded-lg border border-white/5">
                 <button 
                   onClick={() => updateField('lineupTeamVisible', 'home')} 
                   className={`flex-1 py-2 rounded font-bold text-xs uppercase transition-colors ${state.lineupTeamVisible === 'home' ? 'bg-primary text-white shadow-lg' : 'text-textMuted hover:text-white'}`}
@@ -1036,76 +1380,130 @@ export default function Editor() {
                 </button>
               </div>
 
-              <div className="card p-4 bg-surfaceHover border border-white/5 space-y-3 shadow-md">
-                <label className="text-xs text-textMuted block font-bold uppercase tracking-wider">Formación Táctica ({state.lineupTeamVisible === 'home' ? 'Local' : 'Visitante'})</label>
-                <select
-                  className="input-field w-full text-sm font-bold bg-background border-border"
-                  value={state.lineupTeamVisible === 'home' ? state.homeFormation : state.awayFormation}
-                  onChange={(e) => updateField(state.lineupTeamVisible === 'home' ? 'homeFormation' : 'awayFormation', e.target.value)}
+              {/* Formación Táctica - Colapsable */}
+              <div className="card bg-surfaceHover border border-white/5 shadow-md overflow-hidden">
+                <div 
+                  className="p-3.5 flex items-center justify-between cursor-pointer hover:bg-white/5 transition-colors select-none group"
+                  onClick={() => toggleSection('formation')}
                 >
-                  {state.gameMode === '11' && (
-                    <>
-                      <option value="4-3-3">4-3-3 (Ofensiva)</option>
-                      <option value="4-4-2">4-4-2 (Clásica)</option>
-                      <option value="3-5-2">3-5-2 (Carrileros)</option>
-                      <option value="4-2-3-1">4-2-3-1 (Equilibrada)</option>
-                    </>
-                  )}
-                  {state.gameMode === '9' && (
-                    <>
-                      <option value="3-3-2">3-3-2 (Ofensiva)</option>
-                      <option value="3-2-3">3-2-3 (Ataque total)</option>
-                      <option value="4-3-1">4-3-1 (Defensiva)</option>
-                    </>
-                  )}
-                  {state.gameMode === '7' && (
-                    <>
-                      <option value="3-2-1">3-2-1 (Clásica)</option>
-                      <option value="2-3-1">2-3-1 (Ofensiva)</option>
-                      <option value="2-2-2">2-2-2 (Cuadrado Mágico)</option>
-                    </>
-                  )}
-                  {state.gameMode === '5' && (
-                    <>
-                      <option value="2-2">2-2 (Cuadrado)</option>
-                      <option value="1-2-1">1-2-1 (Rombo)</option>
-                      <option value="2-1-1">2-1-1 (Y)</option>
-                      <option value="1-1-2">1-1-2 (Embudo)</option>
-                    </>
-                  )}
-                </select>
+                  <label className="text-xs text-textMuted font-bold uppercase tracking-wider group-hover:text-white transition-colors cursor-pointer">
+                    Formación ({state.lineupTeamVisible === 'home' ? 'Local' : 'Visitante'})
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-white/10 text-white border border-white/15 font-mono">
+                      {state.lineupTeamVisible === 'home' ? state.homeFormation : state.awayFormation}
+                    </span>
+                    <button 
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); toggleSection('formation'); }}
+                      className="p-1 text-textMuted group-hover:text-white hover:bg-white/10 rounded transition-colors"
+                      title={openSections.formation ? 'Colapsar opción' : 'Expandir opción'}
+                    >
+                      {openSections.formation ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                {openSections.formation && (
+                  <div className="p-4 pt-0 border-t border-white/5 mt-1 pt-3">
+                    <select
+                      className="input-field w-full text-sm font-bold bg-background border-border"
+                      value={state.lineupTeamVisible === 'home' ? state.homeFormation : state.awayFormation}
+                      onChange={(e) => updateField(state.lineupTeamVisible === 'home' ? 'homeFormation' : 'awayFormation', e.target.value)}
+                    >
+                      {state.gameMode === '11' && (
+                        <>
+                          <option value="4-3-3">4-3-3 (Ofensiva)</option>
+                          <option value="4-4-2">4-4-2 (Clásica)</option>
+                          <option value="3-5-2">3-5-2 (Carrileros)</option>
+                          <option value="4-2-3-1">4-2-3-1 (Equilibrada)</option>
+                        </>
+                      )}
+                      {state.gameMode === '9' && (
+                        <>
+                          <option value="3-3-2">3-3-2 (Ofensiva)</option>
+                          <option value="3-2-3">3-2-3 (Ataque total)</option>
+                          <option value="4-3-1">4-3-1 (Defensiva)</option>
+                        </>
+                      )}
+                      {state.gameMode === '7' && (
+                        <>
+                          <option value="3-2-1">3-2-1 (Clásica)</option>
+                          <option value="2-3-1">2-3-1 (Ofensiva)</option>
+                          <option value="2-2-2">2-2-2 (Cuadrado Mágico)</option>
+                        </>
+                      )}
+                      {state.gameMode === '5' && (
+                        <>
+                          <option value="2-2">2-2 (Cuadrado)</option>
+                          <option value="1-2-1">1-2-1 (Rombo)</option>
+                          <option value="2-1-1">2-1-1 (Y)</option>
+                          <option value="1-1-2">1-1-2 (Embudo)</option>
+                        </>
+                      )}
+                    </select>
+                  </div>
+                )}
               </div>
 
-              <div className="space-y-2">
-                <div className="flex font-bold text-[10px] text-textMuted uppercase tracking-wider px-2">
-                  <div className="w-12">#</div>
-                  <div className="flex-1">Nombre del Jugador</div>
-                </div>
-                {(state.lineupTeamVisible === 'home' ? state.homePlayers : state.awayPlayers).map((player, idx) => (
-                  <div key={idx} className="flex gap-2 items-center bg-surfaceHover border border-white/5 p-2 rounded-lg">
-                    <input 
-                      type="text" 
-                      className="input-field w-12 text-center font-black" 
-                      value={player.num} 
-                      onChange={(e) => {
-                        const newPlayers = [...(state.lineupTeamVisible === 'home' ? state.homePlayers : state.awayPlayers)];
-                        newPlayers[idx].num = e.target.value;
-                        updateField(state.lineupTeamVisible === 'home' ? 'homePlayers' : 'awayPlayers', newPlayers);
-                      }} 
-                    />
-                    <input 
-                      type="text" 
-                      className="input-field flex-1 font-bold text-sm uppercase" 
-                      value={player.name}
-                      onChange={(e) => {
-                        const newPlayers = [...(state.lineupTeamVisible === 'home' ? state.homePlayers : state.awayPlayers)];
-                        newPlayers[idx].name = e.target.value.toUpperCase();
-                        updateField(state.lineupTeamVisible === 'home' ? 'homePlayers' : 'awayPlayers', newPlayers);
-                      }} 
-                    />
+              {/* Lista de Jugadores - Colapsable */}
+              <div className="card bg-surfaceHover border border-white/5 shadow-md overflow-hidden">
+                <div 
+                  className="p-3.5 flex items-center justify-between cursor-pointer hover:bg-white/5 transition-colors select-none group"
+                  onClick={() => toggleSection('players')}
+                >
+                  <label className="text-xs text-textMuted font-bold uppercase tracking-wider group-hover:text-white transition-colors cursor-pointer">
+                    Plantel de Jugadores ({state.lineupTeamVisible === 'home' ? state.homeName : state.awayName})
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] text-textMuted font-semibold">
+                      {(state.lineupTeamVisible === 'home' ? state.homePlayers : state.awayPlayers).length} jug.
+                    </span>
+                    <button 
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); toggleSection('players'); }}
+                      className="p-1 text-textMuted group-hover:text-white hover:bg-white/10 rounded transition-colors"
+                      title={openSections.players ? 'Colapsar opción' : 'Expandir opción'}
+                    >
+                      {openSections.players ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                    </button>
                   </div>
-                ))}
+                </div>
+
+                {openSections.players && (
+                  <div className="p-4 pt-0 border-t border-white/5 mt-1 pt-3 space-y-2">
+                    <div className="flex font-bold text-[10px] text-textMuted uppercase tracking-wider px-2">
+                      <div className="w-12">#</div>
+                      <div className="flex-1">Nombre del Jugador</div>
+                    </div>
+                    {(state.lineupTeamVisible === 'home' ? state.homePlayers : state.awayPlayers).map((player, idx) => (
+                      <div key={idx} className="flex gap-2 items-center bg-background/50 border border-white/5 p-2 rounded-lg">
+                        <input 
+                          type="text" 
+                          className="input-field w-12 text-center font-black" 
+                          value={player.num} 
+                          onChange={(e) => {
+                            const newPlayers = [...(state.lineupTeamVisible === 'home' ? state.homePlayers : state.awayPlayers)];
+                            newPlayers[idx].num = e.target.value;
+                            updateField(state.lineupTeamVisible === 'home' ? 'homePlayers' : 'awayPlayers', newPlayers);
+                          }} 
+                        />
+                        <input 
+                          type="text" 
+                          className="input-field flex-1 font-bold text-sm uppercase" 
+                          value={player.name}
+                          onChange={(e) => {
+                            const newPlayers = [...(state.lineupTeamVisible === 'home' ? state.homePlayers : state.awayPlayers)];
+                            newPlayers[idx].name = e.target.value.toUpperCase();
+                            updateField(state.lineupTeamVisible === 'home' ? 'homePlayers' : 'awayPlayers', newPlayers);
+                          }} 
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
+
             </div>
           ) : null}
 
@@ -1125,31 +1523,54 @@ export default function Editor() {
                 </button>
               </div>
 
-              {/* Selector de Plantillas Rápidas */}
-              <div className="card p-3.5 bg-surfaceHover border-white/5 shadow-sm space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-bold text-textMuted uppercase tracking-wider">
-                    Cargar Plantilla Base
-                  </span>
-                  <span className="text-[10px] text-textMuted/70">Reemplaza el código</span>
-                </div>
-                <div className="grid grid-cols-2 gap-1.5">
-                  {OVERLAY_STARTER_TEMPLATES.map(tmpl => (
-                    <button
-                      key={tmpl.id}
+              {/* Selector de Plantillas Rápidas - Colapsable */}
+              <div className="card bg-surfaceHover border border-white/5 shadow-sm overflow-hidden">
+                <div 
+                  className="p-3.5 flex items-center justify-between cursor-pointer hover:bg-white/5 transition-colors select-none group"
+                  onClick={() => toggleSection('templates')}
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] font-bold text-textMuted uppercase tracking-wider group-hover:text-white transition-colors">
+                      Plantillas Base
+                    </span>
+                    <span className="text-[10px] text-textMuted/70 hidden sm:inline">• Reemplaza el código</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-white/10 text-textMuted border border-white/10">
+                      {OVERLAY_STARTER_TEMPLATES.find(t => t.id === state.customTemplate)?.name || 'Plantillas'}
+                    </span>
+                    <button 
                       type="button"
-                      onClick={() => handleSelectTemplate(tmpl.id)}
-                      className={`p-2 rounded-lg text-left border transition-all text-xs ${
-                        state.customTemplate === tmpl.id
-                          ? 'bg-primary/20 border-primary text-white font-bold'
-                          : 'bg-background/50 hover:bg-white/10 border-white/5 text-textMuted hover:text-white'
-                      }`}
+                      onClick={(e) => { e.stopPropagation(); toggleSection('templates'); }}
+                      className="p-1 text-textMuted group-hover:text-white hover:bg-white/10 rounded transition-colors"
+                      title={openSections.templates ? 'Colapsar opción' : 'Expandir opción'}
                     >
-                      <span className="font-bold truncate block">{tmpl.name}</span>
-                      <span className="text-[9px] opacity-75">{tmpl.badge}</span>
+                      {openSections.templates ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                     </button>
-                  ))}
+                  </div>
                 </div>
+
+                {openSections.templates && (
+                  <div className="p-3.5 pt-0 border-t border-white/5 mt-1 pt-3">
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {OVERLAY_STARTER_TEMPLATES.map(tmpl => (
+                        <button
+                          key={tmpl.id}
+                          type="button"
+                          onClick={() => handleSelectTemplate(tmpl.id)}
+                          className={`p-2 rounded-lg text-left border transition-all text-xs ${
+                            state.customTemplate === tmpl.id
+                              ? 'bg-primary/20 border-primary text-white font-bold'
+                              : 'bg-background/50 hover:bg-white/10 border-white/5 text-textMuted hover:text-white'
+                          }`}
+                        >
+                          <span className="font-bold truncate block">{tmpl.name}</span>
+                          <span className="text-[9px] opacity-75">{tmpl.badge}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Editor Textarea */}

@@ -49,6 +49,7 @@ export default function Editor() {
   const [aiTopic, setAiTopic] = useState('transmisión de un reportaje en vivo');
   const [aiCopied, setAiCopied] = useState(false);
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [projectName, setProjectName] = useState<string>('');
 
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
     setToast({ type, message });
@@ -122,6 +123,15 @@ export default function Editor() {
     if (id) {
       state.connectWebSocket('studio', id);
       state.loadOverlay(id);
+      // Obtener el nombre del proyecto desde la API
+      const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+      fetch(`${baseUrl}/api/overlays/${id}`)
+        .then(res => res.ok ? res.json() : null)
+        .then(data => {
+          if (data?.name) setProjectName(data.name);
+          else setProjectName(id);
+        })
+        .catch(() => setProjectName(id));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
@@ -295,15 +305,23 @@ export default function Editor() {
         >
           <div className="w-1 h-16 rounded-full bg-white/10 group-hover:bg-primary/70 group-active:bg-primary transition-colors duration-150" />
         </div>
-        <div className="p-4 border-b border-border flex items-center justify-between">
-          <button onClick={() => navigate('/')} className="p-2 hover:bg-surfaceHover rounded-lg transition-colors text-textMuted">
+        <div className="px-4 py-3 border-b border-border flex items-center gap-2 justify-between">
+          <button onClick={() => navigate('/')} className="p-2 hover:bg-surfaceHover rounded-lg transition-colors text-textMuted shrink-0">
             <ArrowLeft className="w-5 h-5" />
           </button>
-          <span className="font-semibold text-sm">Panel de Control</span>
+          <div className="flex-1 min-w-0 text-center">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-textMuted leading-none mb-0.5">Panel de Control</p>
+            <h2
+              className="text-sm font-bold text-white truncate leading-snug"
+              title={projectName || id}
+            >
+              {projectName || id || '...'}
+            </h2>
+          </div>
           <button 
             onClick={handleSave} 
             disabled={isSaving}
-            className={`btn-primary px-3 py-1.5 text-sm flex items-center gap-2 ${isSaving ? 'opacity-50 cursor-wait' : ''}`}
+            className={`btn-primary px-3 py-1.5 text-sm flex items-center gap-2 shrink-0 ${isSaving ? 'opacity-50 cursor-wait' : ''}`}
           >
             <Save className="w-4 h-4" /> {isSaving ? 'Guardando...' : 'Guardar'}
           </button>

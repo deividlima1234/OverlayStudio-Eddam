@@ -65,6 +65,42 @@ export default function Editor() {
   
   const [openSection, setOpenSection] = useState<'home' | 'away' | null>('home');
 
+  // --- Resizable Panel ---
+  const [panelWidth, setPanelWidth] = useState(450);
+  const isResizing = useRef(false);
+  const startX = useRef(0);
+  const startWidth = useRef(450);
+
+  const onResizeMouseDown = (e: React.MouseEvent) => {
+    isResizing.current = true;
+    startX.current = e.clientX;
+    startWidth.current = panelWidth;
+    document.body.style.cursor = 'ew-resize';
+    document.body.style.userSelect = 'none';
+  };
+
+  useEffect(() => {
+    const onMouseMove = (e: MouseEvent) => {
+      if (!isResizing.current) return;
+      const delta = e.clientX - startX.current;
+      const newWidth = Math.min(Math.max(startWidth.current + delta, 320), 700);
+      setPanelWidth(newWidth);
+    };
+    const onMouseUp = () => {
+      if (!isResizing.current) return;
+      isResizing.current = false;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+    };
+  }, []);
+  // --- End Resizable Panel ---
+
   const containerRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(0.4);
 
@@ -80,7 +116,7 @@ export default function Editor() {
     updateScale();
     window.addEventListener('resize', updateScale);
     return () => window.removeEventListener('resize', updateScale);
-  }, []);
+  }, [panelWidth]);
 
   useEffect(() => {
     if (id) {
@@ -247,7 +283,18 @@ export default function Editor() {
 
   return (
     <div className="flex flex-col lg:flex-row h-screen overflow-hidden bg-background font-sans">
-      <aside className="w-full lg:w-[450px] h-[45vh] lg:h-full border-b lg:border-b-0 lg:border-r border-border bg-surface flex flex-col shrink-0 animate-slide-up z-10 shadow-2xl">
+      <aside
+        className="relative w-full h-[45vh] lg:h-full border-b lg:border-b-0 lg:border-r border-border bg-surface flex flex-col shrink-0 animate-slide-up z-10 shadow-2xl"
+        style={{ width: typeof window !== 'undefined' && window.innerWidth >= 1024 ? `${panelWidth}px` : undefined }}
+      >
+        {/* Drag Handle */}
+        <div
+          onMouseDown={onResizeMouseDown}
+          title="Arrastrar para redimensionar"
+          className="hidden lg:flex absolute top-0 right-0 h-full w-3 cursor-ew-resize z-20 group items-center justify-center"
+        >
+          <div className="w-1 h-16 rounded-full bg-white/10 group-hover:bg-primary/70 group-active:bg-primary transition-colors duration-150" />
+        </div>
         <div className="p-4 border-b border-border flex items-center justify-between">
           <button onClick={() => navigate('/')} className="p-2 hover:bg-surfaceHover rounded-lg transition-colors text-textMuted">
             <ArrowLeft className="w-5 h-5" />

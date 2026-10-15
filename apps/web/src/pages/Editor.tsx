@@ -50,6 +50,7 @@ export default function Editor() {
   const [aiCopied, setAiCopied] = useState(false);
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [projectName, setProjectName] = useState<string>('');
+  const [isOverlayLoading, setIsOverlayLoading] = useState(true);
 
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
     setToast({ type, message });
@@ -121,6 +122,10 @@ export default function Editor() {
 
   useEffect(() => {
     if (id) {
+      setIsOverlayLoading(true);
+      // Resetear estado custom antes de cargar el nuevo overlay
+      // para evitar que isCustomProject quede en true entre proyectos
+      state.updateState({ customCode: '', overlayType: undefined, customVariables: {} });
       state.connectWebSocket('studio', id);
       state.loadOverlay(id);
       // Obtener el nombre del proyecto desde la API
@@ -131,7 +136,8 @@ export default function Editor() {
           if (data?.name) setProjectName(data.name);
           else setProjectName(id);
         })
-        .catch(() => setProjectName(id));
+        .catch(() => setProjectName(id))
+        .finally(() => setIsOverlayLoading(false));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
@@ -364,7 +370,39 @@ export default function Editor() {
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
           {activeTab === 'controles' ? (
             <>
-              {/* Visibilidad Global */}
+              {isOverlayLoading ? (
+                /* Skeleton de carga */
+                <div className="space-y-4 animate-pulse">
+                  <div className="card p-5 bg-surfaceHover border-white/5 flex items-center justify-between">
+                    <div className="space-y-2 flex-1">
+                      <div className="h-3 bg-white/10 rounded w-2/5" />
+                      <div className="h-3 bg-white/5 rounded w-3/5" />
+                    </div>
+                    <div className="h-10 w-32 bg-white/10 rounded-lg ml-4" />
+                  </div>
+                  <div className="card p-5 bg-surfaceHover border-white/5 space-y-4">
+                    <div className="h-3 bg-white/10 rounded w-1/3" />
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-3">
+                        <div className="h-3 bg-white/10 rounded w-1/2 mx-auto" />
+                        <div className="h-12 bg-white/10 rounded-lg" />
+                        <div className="h-9 bg-white/10 rounded-lg" />
+                      </div>
+                      <div className="space-y-3">
+                        <div className="h-3 bg-white/10 rounded w-1/2 mx-auto" />
+                        <div className="h-12 bg-white/10 rounded-lg" />
+                        <div className="h-9 bg-white/10 rounded-lg" />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="card p-5 bg-surfaceHover border-white/5 space-y-3">
+                    <div className="h-3 bg-white/10 rounded w-1/4" />
+                    <div className="h-16 bg-white/10 rounded-xl" />
+                    <div className="h-9 bg-white/10 rounded-lg" />
+                  </div>
+                </div>
+              ) : (
+              <>{/* Visibilidad Global */}
               <section className="card p-5 bg-surfaceHover border-white/5 shadow-md flex items-center justify-between">
                 <div>
                   <h3 className="text-xs font-bold uppercase tracking-wider text-textMuted mb-1">
@@ -811,8 +849,8 @@ export default function Editor() {
                   </div>
                 </section>
               )}
-              </>
-            )}
+              </>{/* cierre de la rama else del ternario de loading */}
+              )}
             </>
           ) : activeTab === 'personalizar' ? (
             id?.startsWith('ad-') ? (

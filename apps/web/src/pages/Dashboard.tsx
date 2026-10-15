@@ -26,9 +26,11 @@ export default function Dashboard() {
 
   // Estado para los proyectos desde la DB
   const [projects, setProjects] = useState<any[]>([]);
+  const [isProjectsLoading, setIsProjectsLoading] = useState(true);
 
   useEffect(() => {
     const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+    setIsProjectsLoading(true);
     fetch(`${API_URL}/api/overlays`)
       .then(res => res.json())
       .then(data => {
@@ -51,7 +53,8 @@ export default function Dashboard() {
           { id: 'liga-pro', name: 'Liga Pro eSports - Alineaciones', type: 'lineup', overlays: 3 },
           { id: 'ad-publicidad', name: 'Publicidad & Auspiciadores', type: 'publicidad', overlays: 1 },
         ]);
-      });
+      })
+      .finally(() => setIsProjectsLoading(false));
   }, []);
 
   // Modal de Creación de Proyecto
@@ -323,50 +326,70 @@ export default function Dashboard() {
         </div>
         
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-          {projects.map((proj) => (
-            <div 
-              key={proj.id} 
-              className="card group cursor-pointer hover:-translate-y-1 active:scale-[0.99] transition-all p-5 sm:p-6 flex flex-col justify-between" 
-              onClick={() => navigate(`/editor/${proj.id}`)}
-            >
-              <div>
-                <div className="flex justify-between items-start gap-2 mb-3">
-                  <h3 className="text-base sm:text-lg font-bold group-hover:text-primary transition-colors line-clamp-2 leading-snug">
-                    {proj.name}
-                  </h3>
-                  <div className="flex items-center gap-1 shrink-0 -mr-1 -mt-1">
-                    <button 
-                      onClick={(e) => openModal(e, proj)}
-                      className="p-2 hover:bg-white/10 active:bg-white/20 rounded-lg transition-colors text-textMuted hover:text-white"
-                      title="Configurar Proyecto"
-                      aria-label="Configurar Proyecto"
-                    >
-                      <Settings className="w-5 h-5" />
-                    </button>
-                    <button 
-                      onClick={(e) => { e.stopPropagation(); setDeleteProj(proj); }}
-                      className="p-2 hover:bg-red-500/20 active:bg-red-500/30 rounded-lg transition-colors text-textMuted hover:text-red-400"
-                      title="Eliminar Proyecto"
-                      aria-label="Eliminar Proyecto"
-                    >
-                      <Trash2 className="w-5 h-5" />
-                    </button>
+          {isProjectsLoading
+            ? Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="card p-5 sm:p-6 flex flex-col justify-between min-h-[140px] sm:min-h-[160px] animate-pulse">
+                  <div>
+                    <div className="flex justify-between items-start gap-2 mb-4">
+                      <div className="h-5 bg-white/10 rounded-lg w-3/4" />
+                      <div className="flex gap-1">
+                        <div className="w-8 h-8 rounded-lg bg-white/5" />
+                        <div className="w-8 h-8 rounded-lg bg-white/5" />
+                      </div>
+                    </div>
+                    <div className="h-5 bg-white/10 rounded-md w-1/3" />
+                  </div>
+                  <div className="flex items-center justify-between pt-3 mt-3 border-t border-border/30">
+                    <div className="h-3.5 bg-white/10 rounded w-1/3" />
+                    <div className="h-6 bg-white/10 rounded-md w-16" />
                   </div>
                 </div>
-                <div className="mb-3">
-                  {getProjectTypeBadge(proj.type)}
-                </div>
-              </div>
+              ))
+            : projects.map((proj) => (
+                <div 
+                  key={proj.id} 
+                  className="card group cursor-pointer hover:-translate-y-1 active:scale-[0.99] transition-all p-5 sm:p-6 flex flex-col justify-between" 
+                  onClick={() => navigate(`/editor/${proj.id}`)}
+                >
+                  <div>
+                    <div className="flex justify-between items-start gap-2 mb-3">
+                      <h3 className="text-base sm:text-lg font-bold group-hover:text-primary transition-colors line-clamp-2 leading-snug">
+                        {proj.name}
+                      </h3>
+                      <div className="flex items-center gap-1 shrink-0 -mr-1 -mt-1">
+                        <button 
+                          onClick={(e) => openModal(e, proj)}
+                          className="p-2 hover:bg-white/10 active:bg-white/20 rounded-lg transition-colors text-textMuted hover:text-white"
+                          title="Configurar Proyecto"
+                          aria-label="Configurar Proyecto"
+                        >
+                          <Settings className="w-5 h-5" />
+                        </button>
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); setDeleteProj(proj); }}
+                          className="p-2 hover:bg-red-500/20 active:bg-red-500/30 rounded-lg transition-colors text-textMuted hover:text-red-400"
+                          title="Eliminar Proyecto"
+                          aria-label="Eliminar Proyecto"
+                        >
+                          <Trash2 className="w-5 h-5" />
+                        </button>
+                      </div>
+                    </div>
+                    <div className="mb-3">
+                      {getProjectTypeBadge(proj.type)}
+                    </div>
+                  </div>
 
-              <div className="flex items-center justify-between text-xs sm:text-sm text-textMuted pt-3 mt-2 border-t border-border/60">
-                <span>{proj.overlays} Overlays activos</span>
-                <span className="bg-surfaceHover px-2.5 py-1 rounded-md text-xs font-medium border border-border flex items-center gap-1.5 text-emerald-400">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                  Online
-                </span>
-              </div>
-            </div>
-          ))}
+                  <div className="flex items-center justify-between text-xs sm:text-sm text-textMuted pt-3 mt-2 border-t border-border/60">
+                    <span>{proj.overlays} Overlays activos</span>
+                    <span className="bg-surfaceHover px-2.5 py-1 rounded-md text-xs font-medium border border-border flex items-center gap-1.5 text-emerald-400">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                      Online
+                    </span>
+                  </div>
+                </div>
+              ))
+          }
           
           <div 
             onClick={() => openCreateModal('publicidad')} 

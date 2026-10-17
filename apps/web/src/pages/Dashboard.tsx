@@ -17,7 +17,9 @@ import {
   Trophy,
   Users,
   Sparkles,
-  FileCode
+  FileCode,
+  Home,
+  LogOut
 } from 'lucide-react';
 import { OVERLAY_STARTER_TEMPLATES, generateAIPrompt } from '../templates/overlayTemplates';
 
@@ -305,13 +307,36 @@ export default function Dashboard() {
             <p className="text-xs sm:text-sm text-textMuted mt-0.5">Gestión de gráficos en tiempo real</p>
           </div>
         </div>
-        <button 
-          onClick={() => openCreateModal('custom')} 
-          className="btn-primary flex items-center justify-center gap-2 w-full sm:w-auto py-2.5 px-5 text-sm sm:text-base shadow-lg shadow-primary/20"
-        >
-          <PlusCircle className="w-5 h-5 shrink-0" />
-          <span>Nuevo Proyecto</span>
-        </button>
+        <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
+          <button 
+            onClick={() => navigate('/')} 
+            className="btn-secondary flex items-center justify-center gap-1.5 py-2.5 px-4 text-xs sm:text-sm"
+            title="Ir a la Landing Page Principal"
+          >
+            <Home className="w-4 h-4 text-zinc-400" />
+            <span>Inicio</span>
+          </button>
+
+          <button 
+            onClick={() => {
+              localStorage.removeItem('eddam_user');
+              navigate('/');
+            }} 
+            className="btn-secondary flex items-center justify-center gap-1.5 py-2.5 px-3.5 text-xs sm:text-sm text-zinc-400 hover:text-red-400"
+            title="Cerrar Sesión"
+          >
+            <LogOut className="w-4 h-4" />
+            <span className="hidden sm:inline">Salir</span>
+          </button>
+
+          <button 
+            onClick={() => openCreateModal('custom')} 
+            className="btn-primary flex items-center justify-center gap-2 py-2.5 px-5 text-xs sm:text-sm shadow-lg shadow-primary/20 flex-1 sm:flex-initial"
+          >
+            <PlusCircle className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
+            <span>Nuevo Proyecto</span>
+          </button>
+        </div>
       </header>
 
       <main>

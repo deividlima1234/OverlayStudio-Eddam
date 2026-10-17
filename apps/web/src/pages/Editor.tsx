@@ -25,7 +25,9 @@ import {
   RefreshCw,
   X,
   Zap,
-  Trash2
+  Trash2,
+  Monitor,
+  Smartphone
 } from 'lucide-react';
 import { useOverlayStore } from '../store/useOverlayStore';
 import Scoreboard from '../components/Scoreboard';
@@ -36,6 +38,7 @@ import SponsorOverlay from '../components/SponsorOverlay';
 import TickerOverlay from '../components/TickerOverlay';
 import PopupOverlay from '../components/PopupOverlay';
 import CustomOverlay from '../components/CustomOverlay';
+import DeviceScreenCard, { type ViewMode, type MobileOrientation } from '../components/DeviceScreenCard';
 import { OVERLAY_STARTER_TEMPLATES, generateAIPrompt } from '../templates/overlayTemplates';
 import { 
   parseOverlayVariables, 
@@ -61,6 +64,10 @@ export default function Editor() {
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [projectName, setProjectName] = useState<string>('');
   const [isOverlayLoading, setIsOverlayLoading] = useState(true);
+
+  // --- Modo de Visualización de Pantalla (PC / Móvil Android) ---
+  const [viewMode, setViewMode] = useState<ViewMode>('pc');
+  const [mobileOrientation, setMobileOrientation] = useState<MobileOrientation>('portrait');
 
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
     setToast({ type, message });
@@ -1823,7 +1830,72 @@ export default function Editor() {
 
       <main className="flex-1 flex flex-col relative bg-[#0f0f11] bg-[radial-gradient(#27272a_1px,transparent_1px)] [background-size:24px_24px] overflow-y-auto">
         
-        <div className="absolute top-6 right-6 flex gap-3 z-20">
+        {/* Barra Superior del Lienzo: Selector de Dispositivo Sincronizado y Copiar OBS */}
+        <div className="sticky top-0 z-30 w-full px-4 lg:px-8 py-3.5 flex flex-wrap items-center justify-between gap-3 backdrop-blur-md bg-[#0f0f11]/85 border-b border-white/5 shadow-md">
+          {/* Selector de Pantallas de Equipos (Un solo botón/control sincronizado para Preview y Live) */}
+          <div className="flex items-center gap-1.5 bg-surface/90 p-1.5 rounded-xl border border-white/10 shadow-lg">
+            <span className="text-[11px] font-bold text-textMuted uppercase px-2.5 hidden md:inline">
+              Pantalla:
+            </span>
+            
+            <button
+              type="button"
+              onClick={() => setViewMode('pc')}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                viewMode === 'pc' 
+                  ? 'bg-primary text-white shadow-md shadow-primary/25' 
+                  : 'text-textMuted hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <Monitor className="w-3.5 h-3.5" />
+              <span>PC (Escritorio)</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setViewMode('mobile')}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                viewMode === 'mobile' 
+                  ? 'bg-primary text-white shadow-md shadow-primary/25' 
+                  : 'text-textMuted hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <Smartphone className="w-3.5 h-3.5" />
+              <span>Móvil Android</span>
+            </button>
+
+            {/* Selector de Orientación cuando está en Móvil */}
+            {viewMode === 'mobile' && (
+              <div className="flex items-center pl-2 ml-1 border-l border-white/10 gap-1 bg-black/40 p-0.5 rounded-lg">
+                <button
+                  type="button"
+                  onClick={() => setMobileOrientation('portrait')}
+                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold transition-all ${
+                    mobileOrientation === 'portrait'
+                      ? 'bg-amber-500 text-black shadow-md'
+                      : 'text-textMuted hover:text-white hover:bg-white/10'
+                  }`}
+                  title="Orientación Móvil Vertical"
+                >
+                  <span>↕️ Vertical (9:16)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMobileOrientation('landscape')}
+                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold transition-all ${
+                    mobileOrientation === 'landscape'
+                      ? 'bg-amber-500 text-black shadow-md'
+                      : 'text-textMuted hover:text-white hover:bg-white/10'
+                  }`}
+                  title="Orientación Móvil Horizontal"
+                >
+                  <span>↔️ Horizontal (16:9)</span>
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Botón Copiar URL para OBS */}
           <button 
             onClick={(e) => {
               const url = `${window.location.origin}/render/${id || 'default'}`;
@@ -1833,68 +1905,69 @@ export default function Editor() {
               btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check text-green-500"><path d="M20 6 9 17l-5-5"/></svg> ¡Copiado!';
               setTimeout(() => { btn.innerHTML = originalText; }, 2000);
             }}
-            className="btn-secondary flex items-center gap-2 text-sm bg-surface/80 backdrop-blur-md hover:bg-primary/20 hover:border-primary/50 transition-all shadow-lg"
+            className="btn-secondary flex items-center gap-2 text-xs sm:text-sm bg-surface/80 backdrop-blur-md hover:bg-primary/20 hover:border-primary/50 transition-all shadow-lg py-2"
           >
             <LinkIcon className="w-4 h-4" />
-            Copiar URL para OBS
+            <span className="hidden sm:inline">Copiar URL para OBS</span>
+            <span className="sm:hidden">OBS</span>
           </button>
         </div>
 
-        <div ref={containerRef} className="flex-1 flex flex-col gap-6 items-center justify-start p-4 lg:p-8 w-full min-h-full pb-32">
+        <div ref={containerRef} className="flex-1 flex flex-col gap-8 items-center justify-start p-4 lg:p-8 w-full min-h-full pb-32">
           
           {/* MODO ESTUDIO (PREVIEW) */}
-          <div 
-            className="w-full aspect-video border-2 border-dashed border-white/20 rounded-2xl relative overflow-hidden bg-black/40 shadow-2xl flex-shrink-0"
-            style={{ height: `${1080 * scale}px` }}
+          <DeviceScreenCard
+            mode="preview"
+            viewMode={viewMode}
+            orientation={mobileOrientation}
+            parentScale={scale}
+            projectName={projectName}
           >
-            <span className="absolute top-4 left-4 text-[10px] font-bold px-2 py-1 rounded bg-yellow-500 text-black z-30 uppercase tracking-widest shadow-lg">Preview (Estudio)</span>
-            <div className="w-[1920px] h-[1080px] origin-top-left relative" style={{ transform: `scale(${scale})` }}>
-                {isCustomProject ? (
-                  <CustomOverlay isPreview />
-                ) : isAdProject ? (
-                  <>
-                    <AdOverlay isPreview />
-                    <SponsorOverlay isPreview />
-                    <TickerOverlay isPreview />
-                    <PopupOverlay isPreview />
-                  </>
-                ) : isLineupProject ? (
-                  <Lineup isPreview />
-                ) : (
-                  <>
-                    <Scoreboard isPreview />
-                    <ReplayOverlay />
-                  </>
-                )}
-            </div>
-          </div>
+            {isCustomProject ? (
+              <CustomOverlay isPreview />
+            ) : isAdProject ? (
+              <>
+                <AdOverlay isPreview />
+                <SponsorOverlay isPreview />
+                <TickerOverlay isPreview />
+                <PopupOverlay isPreview />
+              </>
+            ) : isLineupProject ? (
+              <Lineup isPreview />
+            ) : (
+              <>
+                <Scoreboard isPreview />
+                <ReplayOverlay />
+              </>
+            )}
+          </DeviceScreenCard>
 
-          {/* MODO LIVE (PROGRAM) */}
-          <div 
-            className="w-full aspect-video border-2 border-solid border-red-500/50 rounded-2xl relative overflow-hidden bg-black/40 shadow-2xl shadow-red-500/10 flex-shrink-0"
-            style={{ height: `${1080 * scale}px` }}
+          {/* MODO LIVE (PROGRAMA) */}
+          <DeviceScreenCard
+            mode="live"
+            viewMode={viewMode}
+            orientation={mobileOrientation}
+            parentScale={scale}
+            projectName={projectName}
           >
-            <span className="absolute top-4 left-4 text-[10px] font-bold px-2 py-1 rounded bg-red-600 text-white z-30 uppercase tracking-widest shadow-lg animate-pulse">Live (Programa)</span>
-            <div className="w-[1920px] h-[1080px] origin-top-left relative" style={{ transform: `scale(${scale})` }}>
-                {isCustomProject ? (
-                  <CustomOverlay />
-                ) : isAdProject ? (
-                  <>
-                    <AdOverlay />
-                    <SponsorOverlay />
-                    <TickerOverlay />
-                    <PopupOverlay />
-                  </>
-                ) : isLineupProject ? (
-                  <Lineup />
-                ) : (
-                  <>
-                    <Scoreboard />
-                    <ReplayOverlay />
-                  </>
-                )}
-            </div>
-          </div>
+            {isCustomProject ? (
+              <CustomOverlay />
+            ) : isAdProject ? (
+              <>
+                <AdOverlay />
+                <SponsorOverlay />
+                <TickerOverlay />
+                <PopupOverlay />
+              </>
+            ) : isLineupProject ? (
+              <Lineup />
+            ) : (
+              <>
+                <Scoreboard />
+                <ReplayOverlay />
+              </>
+            )}
+          </DeviceScreenCard>
           
         </div>
       </main>

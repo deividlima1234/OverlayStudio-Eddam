@@ -10,8 +10,10 @@ import {
   EyeOff, 
   Sparkles, 
   Zap,
-  Shield
+  Shield,
+  AlertCircle
 } from 'lucide-react';
+import { useAuthStore } from '../store/useAuthStore';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -21,11 +23,13 @@ interface AuthModalProps {
 
 export default function AuthModal({ isOpen, onClose, initialMode = 'login' }: AuthModalProps) {
   const navigate = useNavigate();
+  const setAuth = useAuthStore(s => s.setAuth);
+
   const [mode, setMode] = useState<'login' | 'register'>(initialMode);
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Form states
+  // Estados de campos del formulario
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -34,46 +38,78 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }: Au
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
-    if (!email || !password) {
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanPassword = password.trim();
+
+    if (!cleanEmail || !cleanPassword) {
       setError('Por favor completa todos los campos requeridos.');
       return;
     }
 
-    if (mode === 'register' && !name) {
+    if (mode === 'register' && !name.trim()) {
       setError('Por favor ingresa tu nombre completo.');
       return;
     }
 
     setIsLoading(true);
 
-    // Simulación de autenticación (que conectará con la API en la Fase 2)
-    setTimeout(() => {
-      setIsLoading(false);
-      // Guardar sesión temporal en localStorage
-      const userProfile = {
-        name: name || (email.split('@')[0].toUpperCase()),
-        email: email,
-        token: 'demo-jwt-token-' + Date.now(),
-        avatar: `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(email)}`
-      };
-      localStorage.setItem('eddam_user', JSON.stringify(userProfile));
+    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+    const endpoint = mode === 'register' ? '/api/auth/register' : '/api/auth/login';
+    const payload = mode === 'register' 
+      ? { name: name.trim(), email: cleanEmail, password: cleanPassword }
+      : { email: cleanEmail, password: cleanPassword };
+
+    try {
+      const res = await fetch(`${API_URL}${endpoint}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Error en la autenticación');
+      }
+
+      // Guardar sesión autenticada en Zustand y localStorage
+      setAuth(data.user, data.token);
       onClose();
       navigate('/dashboard');
-    }, 800);
+    } catch (err: any) {
+      // Si la API no está disponible o falla por conexión, ofrecer fallback local
+      console.warn('API Auth error:', err);
+      if (err.message.includes('Failed to fetch') || err.message.includes('NetworkError')) {
+        // Fallback local para desarrollo si la API estuviera pausada
+        const fallbackUser = {
+          id: 'usr_local_' + Math.random().toString(36).substring(7),
+          name: name || cleanEmail.split('@')[0],
+          email: cleanEmail,
+          avatar: `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(cleanEmail)}`
+        };
+        setAuth(fallbackUser, 'local-token-' + Date.now());
+        onClose();
+        navigate('/dashboard');
+      } else {
+        setError(err.message || 'Error de conexión con el servidor.');
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleGuestAccess = () => {
     const guestProfile = {
+      id: 'usr_guest',
       name: 'Usuario Invitado',
       email: 'invitado@eddam.studio',
-      token: 'guest-token-' + Date.now(),
       avatar: 'https://api.dicebear.com/7.x/bottts/svg?seed=guest'
     };
-    localStorage.setItem('eddam_user', JSON.stringify(guestProfile));
+    setAuth(guestProfile, 'guest-token-' + Date.now());
     onClose();
     navigate('/dashboard');
   };
@@ -144,7 +180,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }: Au
         {/* Mensaje de Error */}
         {error && (
           <div className="mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-300 text-xs flex items-center gap-2">
-            <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+            <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
             <span>{error}</span>
           </div>
         )}
@@ -160,6 +196,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }: Au
                 <User className="w-4 h-4 text-zinc-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
+                  required
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Ej. Juan Pérez / Liga Deportes"
@@ -177,6 +214,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }: Au
               <Mail className="w-4 h-4 text-zinc-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
               <input
                 type="email"
+                required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="tu@correo.com"
@@ -200,6 +238,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }: Au
               <Lock className="w-4 h-4 text-zinc-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
               <input
                 type={showPassword ? 'text' : 'password'}
+                required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
@@ -234,7 +273,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }: Au
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full py-3 bg-primary hover:bg-primaryHover text-white font-bold rounded-xl text-sm flex items-center justify-center gap-2 shadow-lg shadow-primary/25 transition-all hover:scale-[1.01] active:scale-95 disabled:opacity-50 mt-2"
+            className="w-full py-3 bg-primary hover:bg-primaryHover text-white font-bold rounded-xl text-sm flex items-center justify-center gap-2 shadow-lg shadow-primary/25 transition-all hover:scale-[1.01] active:scale-95 disabled:opacity-50 mt-2 cursor-pointer"
           >
             {isLoading ? (
               <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -258,7 +297,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }: Au
         <button
           type="button"
           onClick={handleGuestAccess}
-          className="w-full py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-300 hover:text-white text-xs font-semibold rounded-xl flex items-center justify-center gap-2 transition-all active:scale-95"
+          className="w-full py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-300 hover:text-white text-xs font-semibold rounded-xl flex items-center justify-center gap-2 transition-all active:scale-95 cursor-pointer"
         >
           <Zap className="w-4 h-4 text-amber-400" />
           <span>Probar como Invitado (Acceso Inmediato)</span>
@@ -267,7 +306,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }: Au
         {/* Garantía de Seguridad */}
         <div className="mt-5 flex items-center justify-center gap-1.5 text-[10px] text-zinc-500">
           <Shield className="w-3.5 h-3.5 text-emerald-400" />
-          <span>Conexión cifrada de extremo a extremo con OBS Studio</span>
+          <span>Conexión segura y aislamiento de overlays por cuenta</span>
         </div>
       </div>
     </div>

@@ -45,11 +45,13 @@ import {
   extractInitialValues, 
   type OverlayVariableDef 
 } from '../utils/variableParser';
+import { useAuthStore } from '../store/useAuthStore';
 
 export default function Editor() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const state = useOverlayStore();
+  const { getAuthHeaders } = useAuthStore();
   const [activeTab, setActiveTab] = useState<'controles' | 'personalizar' | 'jugadores' | 'codigo'>('controles');
   
   const isCustomProject = state.overlayType === 'custom' || Boolean(state.customCode);
@@ -188,7 +190,9 @@ export default function Editor() {
       state.connectWebSocket('studio', id);
       
       const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-      fetch(`${baseUrl}/api/overlays/${id}`)
+      fetch(`${baseUrl}/api/overlays/${id}`, {
+        headers: { ...getAuthHeaders() }
+      })
         .then(res => res.ok ? res.json() : null)
         .then(data => {
           if (data?.name) setProjectName(data.name);
@@ -291,7 +295,10 @@ export default function Editor() {
       const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
       await fetch(`${baseUrl}/api/overlays/${overlayId}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...getAuthHeaders()
+        },
         body: JSON.stringify({
           type: 'custom',
           settings: settingsToSave
@@ -389,7 +396,10 @@ export default function Editor() {
       
       const response = await fetch(`${baseUrl}/api/overlays/${overlayId}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...getAuthHeaders()
+        },
         body: JSON.stringify({
           type: state.overlayType,
           settings: {
@@ -461,11 +471,16 @@ export default function Editor() {
       };
       localStorage.setItem(`eddam_overlay_${overlayId}`, JSON.stringify(overlaySettings));
 
+      if (response.status === 403) {
+        showToast('Acceso Denegado: Este overlay pertenece a otro usuario y no puede ser modificado.', 'error');
+        return;
+      }
+
       if (!response.ok) throw new Error('Error al guardar');
       showToast('¡Overlay guardado correctamente en la Base de Datos!', 'success');
     } catch (error: any) {
       console.error(error);
-      showToast('Hubo un error al guardar en la base de datos.', 'error');
+      showToast(error.message || 'Hubo un error al guardar en la base de datos.', 'error');
     } finally {
       setIsSaving(false);
     }

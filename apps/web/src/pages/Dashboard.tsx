@@ -22,9 +22,11 @@ import {
   LogOut
 } from 'lucide-react';
 import { OVERLAY_STARTER_TEMPLATES, generateAIPrompt } from '../templates/overlayTemplates';
+import { useAuthStore } from '../store/useAuthStore';
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const { user, logout, getAuthHeaders } = useAuthStore();
 
   // Estado para los proyectos desde la DB
   const [projects, setProjects] = useState<any[]>([]);
@@ -33,28 +35,22 @@ export default function Dashboard() {
   useEffect(() => {
     const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
     setIsProjectsLoading(true);
-    fetch(`${API_URL}/api/overlays`)
+    fetch(`${API_URL}/api/overlays`, {
+      headers: { ...getAuthHeaders() }
+    })
       .then(res => res.json())
       .then(data => {
-        if (data && data.length > 0) {
+        if (data && Array.isArray(data) && data.length > 0) {
           // Mapeamos los datos de la DB para la UI
           setProjects(data.map((p: any) => ({ ...p, overlays: p.type === 'publicidad' || p.type === 'custom' ? 1 : 3 })));
         } else {
-          // Datos por defecto si la DB está vacía
-          setProjects([
-            { id: 'torneo-regional', name: 'Torneo Regional 2026 - Marcador', type: 'scoreboard', overlays: 3 },
-            { id: 'liga-pro', name: 'Liga Pro eSports - Alineaciones', type: 'lineup', overlays: 3 },
-            { id: 'ad-publicidad', name: 'Publicidad & Auspiciadores', type: 'publicidad', overlays: 1 },
-          ]);
+          // Proyectos de inicio limpios para nuevos usuarios
+          setProjects([]);
         }
       })
       .catch(e => {
         console.error(e);
-        setProjects([
-          { id: 'torneo-regional', name: 'Torneo Regional 2026 - Marcador', type: 'scoreboard', overlays: 3 },
-          { id: 'liga-pro', name: 'Liga Pro eSports - Alineaciones', type: 'lineup', overlays: 3 },
-          { id: 'ad-publicidad', name: 'Publicidad & Auspiciadores', type: 'publicidad', overlays: 1 },
-        ]);
+        setProjects([]);
       })
       .finally(() => setIsProjectsLoading(false));
   }, []);
@@ -159,7 +155,10 @@ export default function Dashboard() {
       const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
       const res = await fetch(`${API_URL}/api/overlays/${finalId}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...getAuthHeaders()
+        },
         body: JSON.stringify({
           name: trimmedName,
           type: newProjectType,
@@ -211,7 +210,10 @@ export default function Dashboard() {
       try {
         const res = await fetch(`${API_URL}/api/overlays/${editId}`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+            ...getAuthHeaders()
+          },
           body: JSON.stringify({ name: editName, type: modalProject.type, settings: modalProject.settings })
         });
         
@@ -239,7 +241,10 @@ export default function Dashboard() {
     const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
     const projNameToDelete = deleteProj.name;
     try {
-      const res = await fetch(`${API_URL}/api/overlays/${deleteProj.id}`, { method: 'DELETE' });
+      const res = await fetch(`${API_URL}/api/overlays/${deleteProj.id}`, { 
+        method: 'DELETE',
+        headers: { ...getAuthHeaders() }
+      });
       if (!res.ok) {
         throw new Error(`Código ${res.status}`);
       }
@@ -307,22 +312,40 @@ export default function Dashboard() {
             <p className="text-xs sm:text-sm text-textMuted mt-0.5">Gestión de gráficos en tiempo real</p>
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
+        <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+          {user && (
+            <div className="flex items-center gap-2.5 bg-surface/80 border border-white/10 px-3 py-1.5 rounded-xl shadow-sm">
+              <img 
+                src={user.avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(user.email)}`} 
+                alt="Avatar" 
+                className="w-7 h-7 rounded-lg bg-primary/20 p-0.5 border border-primary/30 shrink-0" 
+              />
+              <div className="text-left text-xs leading-tight">
+                <span className="font-bold text-white block truncate max-w-[120px] sm:max-w-[150px]">
+                  {user.name}
+                </span>
+                <span className="text-[10px] text-zinc-400 font-mono truncate block max-w-[120px]">
+                  {user.email}
+                </span>
+              </div>
+            </div>
+          )}
+
           <button 
             onClick={() => navigate('/')} 
-            className="btn-secondary flex items-center justify-center gap-1.5 py-2.5 px-4 text-xs sm:text-sm"
+            className="btn-secondary flex items-center justify-center gap-1.5 py-2.5 px-3.5 text-xs sm:text-sm"
             title="Ir a la Landing Page Principal"
           >
             <Home className="w-4 h-4 text-zinc-400" />
-            <span>Inicio</span>
+            <span className="hidden sm:inline">Inicio</span>
           </button>
 
           <button 
             onClick={() => {
-              localStorage.removeItem('eddam_user');
+              logout();
               navigate('/');
             }} 
-            className="btn-secondary flex items-center justify-center gap-1.5 py-2.5 px-3.5 text-xs sm:text-sm text-zinc-400 hover:text-red-400"
+            className="btn-secondary flex items-center justify-center gap-1.5 py-2.5 px-3 text-xs sm:text-sm text-zinc-400 hover:text-red-400 hover:border-red-500/30 transition-all"
             title="Cerrar Sesión"
           >
             <LogOut className="w-4 h-4" />
@@ -331,7 +354,7 @@ export default function Dashboard() {
 
           <button 
             onClick={() => openCreateModal('custom')} 
-            className="btn-primary flex items-center justify-center gap-2 py-2.5 px-5 text-xs sm:text-sm shadow-lg shadow-primary/20 flex-1 sm:flex-initial"
+            className="btn-primary flex items-center justify-center gap-2 py-2.5 px-4 sm:px-5 text-xs sm:text-sm shadow-lg shadow-primary/20 flex-1 sm:flex-initial"
           >
             <PlusCircle className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
             <span>Nuevo Proyecto</span>

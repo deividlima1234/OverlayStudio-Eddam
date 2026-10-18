@@ -230,7 +230,50 @@ fastify.register(async function (fastify) {
     }
   });
 
-  // 2. Verificar código y restablecer contraseña
+  // 2. Verificar código de 6 dígitos
+  fastify.post('/api/auth/verify-code', async (req, reply) => {
+    const { email, code } = req.body as any;
+
+    if (!email || !code) {
+      return reply.code(400).send({ error: 'Correo y código son obligatorios' });
+    }
+
+    const cleanEmail = email.toLowerCase().trim();
+    const cleanCode = code.toString().trim();
+
+    try {
+      const records = await db
+        .select()
+        .from(verificationCodes)
+        .where(
+          and(
+            eq(verificationCodes.email, cleanEmail),
+            eq(verificationCodes.code, cleanCode),
+            eq(verificationCodes.used, false)
+          )
+        );
+
+      if (records.length === 0) {
+        return reply.code(400).send({ error: 'El código ingresado es incorrecto o no existe.' });
+      }
+
+      const codeRecord = records[0];
+
+      if (new Date() > new Date(codeRecord.expiresAt)) {
+        return reply.code(400).send({ error: 'El código ha expirado. Por favor solicita uno nuevo.' });
+      }
+
+      return {
+        success: true,
+        message: 'Código verificado correctamente.'
+      };
+    } catch (error: any) {
+      fastify.log.error(error);
+      return reply.code(500).send({ error: 'Error al verificar el código: ' + error.message });
+    }
+  });
+
+  // 3. Restablecer contraseña con código ya verificado
   fastify.post('/api/auth/reset-password', async (req, reply) => {
     const { email, code, newPassword } = req.body as any;
 

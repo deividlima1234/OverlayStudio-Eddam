@@ -26,7 +26,7 @@ interface AuthModalProps {
   initialMode?: 'login' | 'register';
 }
 
-type AuthMode = 'login' | 'register' | 'forgot' | 'verify-reset' | 'reset-success';
+type AuthMode = 'login' | 'register' | 'forgot' | 'verify-code' | 'new-password' | 'reset-success';
 
 export default function AuthModal({ isOpen, onClose, initialMode = 'login' }: AuthModalProps) {
   const navigate = useNavigate();
@@ -138,7 +138,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }: Au
     }
   };
 
-  // 1. Solicitar Código de Verificación
+  // 1. Paso 1: Solicitar Código de Verificación al correo
   const handleRequestCode = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     setError(null);
@@ -164,15 +164,16 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }: Au
         throw new Error(data.error || 'Error al solicitar el código de recuperación');
       }
 
-      setMode('verify-reset');
+      setMode('verify-code');
       setResendCooldown(60);
       setSuccessNotice('Código de 6 dígitos enviado. Revisa tu bandeja de entrada o spam.');
+      setDigits(['', '', '', '', '', '']);
       setTimeout(() => inputRefs.current[0]?.focus(), 150);
     } catch (err: any) {
       console.warn('Forgot-password API error:', err);
       if (err.message.includes('Failed to fetch') || err.message.includes('NetworkError')) {
         // En modo local sin backend activo simulamos el envío para permitir pruebas de UI
-        setMode('verify-reset');
+        setMode('verify-code');
         setResendCooldown(60);
         setSuccessNotice('Simulación local: Usa el código 123456');
         setTimeout(() => inputRefs.current[0]?.focus(), 150);
@@ -217,8 +218,8 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }: Au
     }
   };
 
-  // 2. Restablecer Contraseña con Código
-  const handleResetPassword = async (e: React.FormEvent) => {
+  // 2. Paso 2: Verificar PRIMERO el código de 6 dígitos antes de pedir nueva contraseña
+  const handleVerifyCode = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
@@ -227,6 +228,47 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }: Au
       setError('Por favor ingresa los 6 dígitos del código de verificación.');
       return;
     }
+
+    setIsLoading(true);
+
+    try {
+      const res = await fetch(`${API_URL}/api/auth/verify-code`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: email.trim().toLowerCase(),
+          code: fullCode
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Código incorrecto o expirado');
+      }
+
+      // Código verificado exitosamente -> avanzar al formulario de nueva clave
+      setSuccessNotice('Código verificado con éxito. Define tu nueva contraseña.');
+      setMode('new-password');
+    } catch (err: any) {
+      console.warn('Verify-code API error:', err);
+      if (err.message.includes('Failed to fetch') || err.message.includes('NetworkError')) {
+        // En simulación local
+        setSuccessNotice('Código verificado con éxito.');
+        setMode('new-password');
+      } else {
+        setError(err.message || 'El código ingresado es incorrecto o no existe.');
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // 3. Paso 3: Guardar la nueva contraseña
+  const handleSaveNewPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+
+    const fullCode = digits.join('');
 
     if (newPassword.length < 6) {
       setError('La nueva contraseña debe tener al menos 6 caracteres.');
@@ -260,10 +302,9 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }: Au
     } catch (err: any) {
       console.warn('Reset-password API error:', err);
       if (err.message.includes('Failed to fetch') || err.message.includes('NetworkError')) {
-        // Fallback local para desarrollo
         setMode('reset-success');
       } else {
-        setError(err.message || 'Error al verificar el código.');
+        setError(err.message || 'Error al guardar la nueva contraseña.');
       }
     } finally {
       setIsLoading(false);
@@ -296,25 +337,29 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }: Au
         <div className="absolute -bottom-20 -left-20 w-44 h-44 bg-indigo-600/20 rounded-full blur-3xl pointer-events-none" />
 
         {/* Botón Volver (para modos de recuperación) */}
-        {(mode === 'forgot' || mode === 'verify-reset') && (
+        {(mode === 'forgot' || mode === 'verify-code' || mode === 'new-password') && (
           <button 
             type="button"
             onClick={() => {
               setError(null);
               setSuccessNotice(null);
-              setMode(mode === 'verify-reset' ? 'forgot' : 'login');
+              if (mode === 'new-password') setMode('verify-code');
+              else if (mode === 'verify-code') setMode('forgot');
+              else setMode('login');
             }}
-            className="absolute top-5 left-5 p-2 text-zinc-400 hover:text-white hover:bg-white/5 rounded-full transition-all flex items-center gap-1.5 text-xs font-semibold"
+            className="absolute top-5 left-5 p-2 text-zinc-400 hover:text-white hover:bg-white/5 rounded-full transition-all flex items-center gap-1.5 text-xs font-semibold cursor-pointer"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span>{mode === 'verify-reset' ? 'Cambiar correo' : 'Volver'}</span>
+            <span>
+              {mode === 'new-password' ? 'Cambiar código' : mode === 'verify-code' ? 'Cambiar correo' : 'Volver'}
+            </span>
           </button>
         )}
 
         {/* Botón cerrar */}
         <button 
           onClick={onClose}
-          className="absolute top-5 right-5 p-2 text-zinc-400 hover:text-white hover:bg-white/5 rounded-full transition-all"
+          className="absolute top-5 right-5 p-2 text-zinc-400 hover:text-white hover:bg-white/5 rounded-full transition-all cursor-pointer"
         >
           <X className="w-5 h-5" />
         </button>
@@ -571,7 +616,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }: Au
                   setError(null);
                   setMode('login');
                 }}
-                className="w-full py-2.5 text-xs text-zinc-400 hover:text-white transition-colors text-center font-medium"
+                className="w-full py-2.5 text-xs text-zinc-400 hover:text-white transition-colors text-center font-medium cursor-pointer"
               >
                 Cancelar y volver al inicio
               </button>
@@ -580,14 +625,14 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }: Au
         )}
 
         {/* ======================================================== */}
-        {/* VISTA 4: INGRESAR CÓDIGO DE 6 DÍGITOS Y NUEVA CONTRASEÑA */}
+        {/* VISTA 4: PASO 2 - INGRESAR Y VERIFICAR CÓDIGO PRIMERO    */}
         {/* ======================================================== */}
-        {mode === 'verify-reset' && (
+        {mode === 'verify-code' && (
           <div>
             <div className="text-center mt-3 mb-5">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold mb-3">
                 <ShieldCheck className="w-3.5 h-3.5" />
-                <span>Verificación de Seguridad</span>
+                <span>Paso 1: Verificación de Código</span>
               </div>
               <h2 className="text-2xl font-black tracking-tight">Ingresa el Código</h2>
               <p className="text-xs text-zinc-400 mt-1 max-w-xs mx-auto">
@@ -610,7 +655,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }: Au
               </div>
             )}
 
-            <form onSubmit={handleResetPassword} className="space-y-4">
+            <form onSubmit={handleVerifyCode} className="space-y-4">
               {/* 6 Cuadros de Código PIN */}
               <div>
                 <label className="block text-center text-[11px] font-bold text-zinc-400 uppercase tracking-wider mb-2">
@@ -651,6 +696,50 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }: Au
                 )}
               </div>
 
+              {/* Botón de Verificación de Código */}
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full py-3 bg-primary hover:bg-primaryHover text-white font-bold rounded-xl text-sm flex items-center justify-center gap-2 shadow-lg shadow-primary/25 transition-all hover:scale-[1.01] active:scale-95 disabled:opacity-50 mt-4 cursor-pointer"
+              >
+                {isLoading ? (
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <>
+                    <span>Verificar Código</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </>
+                )}
+              </button>
+            </form>
+          </div>
+        )}
+
+        {/* ======================================================== */}
+        {/* VISTA 5: PASO 3 - FORMULARIO DE NUEVA CONTRASEÑA         */}
+        {/* (Solo se muestra cuando el código ya ha sido verificado) */}
+        {/* ======================================================== */}
+        {mode === 'new-password' && (
+          <div>
+            <div className="text-center mt-3 mb-5">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-bold mb-3">
+                <KeyRound className="w-3.5 h-3.5" />
+                <span>Paso 2: Nueva Contraseña</span>
+              </div>
+              <h2 className="text-2xl font-black tracking-tight">Cambia tu Contraseña</h2>
+              <p className="text-xs text-zinc-400 mt-1 max-w-xs mx-auto">
+                Código verificado. Ingresa y confirma tu nueva contraseña de acceso.
+              </p>
+            </div>
+
+            {error && (
+              <div className="mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-300 text-xs flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+                <span>{error}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleSaveNewPassword} className="space-y-4">
               {/* Campo: Nueva Contraseña */}
               <div>
                 <label className="block text-[11px] font-bold text-zinc-400 uppercase tracking-wider mb-1.5">
@@ -661,6 +750,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }: Au
                   <input
                     type={showNewPassword ? 'text' : 'password'}
                     required
+                    autoFocus
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
                     placeholder="Mínimo 6 caracteres"
@@ -711,7 +801,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }: Au
                   <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                 ) : (
                   <>
-                    <span>Restablecer y Guardar Contraseña</span>
+                    <span>Guardar Nueva Contraseña</span>
                     <ArrowRight className="w-4 h-4" />
                   </>
                 )}
@@ -721,7 +811,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }: Au
         )}
 
         {/* ======================================================== */}
-        {/* VISTA 5: ÉXITO TOTAL AL RESTABLECER                      */}
+        {/* VISTA 6: ÉXITO TOTAL AL RESTABLECER                      */}
         {/* ======================================================== */}
         {mode === 'reset-success' && (
           <div className="text-center py-6">
@@ -730,10 +820,10 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }: Au
             </div>
 
             <h2 className="text-2xl font-black tracking-tight text-white mb-2">
-              ¡Contraseña Restablecida!
+              ¡Contraseña Actualizada!
             </h2>
             <p className="text-xs text-zinc-400 max-w-xs mx-auto mb-6">
-              Tu contraseña ha sido actualizada exitosamente. Ahora puedes ingresar al estudio con tu nueva clave.
+              Tu contraseña ha sido restablecida exitosamente. Ya puedes ingresar al estudio con tu nueva clave.
             </p>
 
             <button

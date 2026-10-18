@@ -4,9 +4,10 @@ import fastifyJwt from '@fastify/jwt';
 import cors from '@fastify/cors';
 import bcrypt from 'bcryptjs';
 import { db } from './db/index.js';
-import { overlays, users } from './db/schema.js';
-import { eq, and, or, isNull } from 'drizzle-orm';
+import { overlays, users, verificationCodes } from './db/schema.js';
+import { eq, and, or, isNull, desc, sql } from 'drizzle-orm';
 import crypto from 'node:crypto';
+import { sendResetCodeEmail } from './mailer.js';
 
 const fastify = Fastify({ 
   logger: true,
@@ -158,6 +159,138 @@ fastify.register(async function (fastify) {
       return reply.code(401).send({ error: 'Token no válido o expirado' });
     }
   });
+
+  // 1. Solicitar código de recuperación de contraseña (6 dígitos)
+  fastify.post('/api/auth/forgot-password', async (req, reply) => {
+    const { email } = req.body as any;
+
+    if (!email || typeof email !== 'string') {
+      return reply.code(400).send({ error: 'Debes proporcionar un correo electrónico válido' });
+    }
+
+    const cleanEmail = email.toLowerCase().trim();
+
+    try {
+      // Asegurar que la tabla verification_codes exista
+      await db.execute(sql`
+        CREATE TABLE IF NOT EXISTS verification_codes (
+          id VARCHAR(255) PRIMARY KEY,
+          email VARCHAR(255) NOT NULL,
+          code VARCHAR(10) NOT NULL,
+          expires_at TIMESTAMP NOT NULL,
+          used BOOLEAN DEFAULT false NOT NULL,
+          created_at TIMESTAMP DEFAULT NOW() NOT NULL
+        );
+      `);
+
+      // Buscar si el usuario existe
+      const userList = await db.select().from(users).where(eq(users.email, cleanEmail));
+      
+      // Si no existe, devolvemos éxito para evitar enumeración maliciosa de cuentas
+      if (userList.length === 0) {
+        return {
+          success: true,
+          message: 'Si el correo está registrado, recibirás un código de verificación en breve.'
+        };
+      }
+
+      const user = userList[0];
+
+      // Generar código numérico aleatorio de 6 dígitos
+      const code = Math.floor(100000 + Math.random() * 900000).toString();
+      const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutos
+
+      // Invalidar códigos previos no usados para este correo
+      await db.delete(verificationCodes).where(eq(verificationCodes.email, cleanEmail));
+
+      // Guardar nuevo código
+      await db.insert(verificationCodes).values({
+        id: 'code_' + crypto.randomUUID(),
+        email: cleanEmail,
+        code,
+        expiresAt,
+        used: false,
+        createdAt: new Date(),
+      });
+
+      // Enviar correo (o loguear en consola en desarrollo)
+      await sendResetCodeEmail({
+        to: cleanEmail,
+        code,
+        userName: user.name
+      });
+
+      return {
+        success: true,
+        message: 'Código de verificación enviado correctamente a tu correo.'
+      };
+    } catch (error: any) {
+      fastify.log.error(error);
+      return reply.code(500).send({ error: 'Error al procesar la solicitud de recuperación: ' + error.message });
+    }
+  });
+
+  // 2. Verificar código y restablecer contraseña
+  fastify.post('/api/auth/reset-password', async (req, reply) => {
+    const { email, code, newPassword } = req.body as any;
+
+    if (!email || !code || !newPassword) {
+      return reply.code(400).send({ error: 'Correo, código y nueva contraseña son obligatorios' });
+    }
+
+    const cleanEmail = email.toLowerCase().trim();
+    const cleanCode = code.toString().trim();
+
+    if (newPassword.length < 6) {
+      return reply.code(400).send({ error: 'La nueva contraseña debe tener al menos 6 caracteres' });
+    }
+
+    try {
+      // Buscar código válido no usado
+      const records = await db
+        .select()
+        .from(verificationCodes)
+        .where(
+          and(
+            eq(verificationCodes.email, cleanEmail),
+            eq(verificationCodes.code, cleanCode),
+            eq(verificationCodes.used, false)
+          )
+        );
+
+      if (records.length === 0) {
+        return reply.code(400).send({ error: 'El código ingresado es incorrecto o no existe.' });
+      }
+
+      const codeRecord = records[0];
+
+      if (new Date() > new Date(codeRecord.expiresAt)) {
+        return reply.code(400).send({ error: 'El código ha expirado. Por favor solicita uno nuevo.' });
+      }
+
+      // Hashear nueva contraseña
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+      // Actualizar contraseña del usuario
+      await db.update(users)
+        .set({ password: hashedPassword })
+        .where(eq(users.email, cleanEmail));
+
+      // Marcar código como utilizado
+      await db.update(verificationCodes)
+        .set({ used: true })
+        .where(eq(verificationCodes.id, codeRecord.id));
+
+      return {
+        success: true,
+        message: 'Contraseña actualizada correctamente. Ya puedes iniciar sesión con tu nueva contraseña.'
+      };
+    } catch (error: any) {
+      fastify.log.error(error);
+      return reply.code(500).send({ error: 'Error al restablecer la contraseña: ' + error.message });
+    }
+  });
+
   
   // ==========================================
   // WEBSOCKET (ROOMS AISLADAS POR OVERLAY ID)

@@ -9,8 +9,8 @@ interface SendVerificationCodeParams {
 export async function sendResetCodeEmail({ to, code, userName }: SendVerificationCodeParams): Promise<boolean> {
   const smtpHost = process.env.SMTP_HOST;
   const smtpPort = Number(process.env.SMTP_PORT) || 587;
-  const smtpUser = process.env.SMTP_USER;
-  const smtpPass = process.env.SMTP_PASS;
+  const smtpUser = process.env.SMTP_USER?.trim();
+  const smtpPass = process.env.SMTP_PASS ? process.env.SMTP_PASS.replace(/\s+/g, '') : undefined;
   const smtpFrom = process.env.SMTP_FROM || '"Eddam Overlay Studio" <no-reply@eddamstudio.com>';
 
   // Banner en consola para desarrollo

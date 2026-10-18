@@ -70,8 +70,25 @@ export async function sendResetCodeEmail({ to, code, userName }: SendVerificatio
   if (resendApiKey) {
     try {
       const resend = new Resend(resendApiKey);
+
+      // Resend requiere un dominio verificado propio para usar remitentes personalizados.
+      // Si el remitente configurado es @gmail.com u otro correo público, usamos el remitente
+      // de pruebas autorizado de Resend (onboarding@resend.dev)
+      let resendSender = process.env.RESEND_FROM || emailFrom;
+      if (
+        !process.env.RESEND_FROM &&
+        (resendSender.includes('@gmail.') ||
+         resendSender.includes('@hotmail.') ||
+         resendSender.includes('@yahoo.') ||
+         resendSender.includes('@outlook.'))
+      ) {
+        resendSender = 'Eddam Overlay Studio <onboarding@resend.dev>';
+      }
+
+      console.log(`📤 [Resend] Enviando desde remitente: ${resendSender} hacia: ${to}`);
+
       const { data, error } = await resend.emails.send({
-        from: emailFrom,
+        from: resendSender,
         to: [to],
         subject: `🔑 ${code} es tu código de recuperación - Eddam Overlay Studio`,
         text: `Tu código de recuperación es: ${code}. Válido por 15 minutos.`,

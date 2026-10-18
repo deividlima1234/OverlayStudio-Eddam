@@ -214,11 +214,17 @@ fastify.register(async function (fastify) {
       });
 
       // Enviar correo (o loguear en consola en desarrollo)
-      await sendResetCodeEmail({
+      const emailSent = await sendResetCodeEmail({
         to: cleanEmail,
         code,
         userName: user.name
       });
+
+      if (!emailSent) {
+        return reply.code(500).send({
+          error: 'No se pudo entregar el correo de verificación. Por favor intenta nuevamente.'
+        });
+      }
 
       return {
         success: true,

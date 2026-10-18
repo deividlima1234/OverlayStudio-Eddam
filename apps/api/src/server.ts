@@ -160,6 +160,83 @@ fastify.register(async function (fastify) {
     }
   });
 
+  // Actualizar perfil del usuario (nombre y avatar)
+  fastify.put('/api/auth/profile', async (req, reply) => {
+    try {
+      await req.jwtVerify();
+      const authUser = req.user as any;
+      const { name, avatar } = req.body as any;
+
+      if (!name || typeof name !== 'string' || !name.trim()) {
+        return reply.code(400).send({ error: 'El nombre es obligatorio.' });
+      }
+
+      await db.update(users)
+        .set({
+          name: name.trim(),
+          ...(avatar !== undefined ? { avatar: avatar.trim() } : {})
+        })
+        .where(eq(users.id, authUser.id));
+
+      const updatedUsers = await db.select().from(users).where(eq(users.id, authUser.id));
+      const u = updatedUsers[0];
+
+      return {
+        success: true,
+        user: {
+          id: u.id,
+          name: u.name,
+          email: u.email,
+          avatar: u.avatar
+        }
+      };
+    } catch (err: any) {
+      fastify.log.error(err);
+      return reply.code(401).send({ error: 'No autorizado o token expirado' });
+    }
+  });
+
+  // Cambiar contraseña desde dentro de la sesión activa
+  fastify.put('/api/auth/change-password', async (req, reply) => {
+    try {
+      await req.jwtVerify();
+      const authUser = req.user as any;
+      const { currentPassword, newPassword } = req.body as any;
+
+      if (!currentPassword || !newPassword) {
+        return reply.code(400).send({ error: 'La contraseña actual y la nueva son requeridas.' });
+      }
+
+      if (newPassword.length < 6) {
+        return reply.code(400).send({ error: 'La nueva contraseña debe tener al menos 6 caracteres.' });
+      }
+
+      const userList = await db.select().from(users).where(eq(users.id, authUser.id));
+      if (userList.length === 0) {
+        return reply.code(404).send({ error: 'Usuario no encontrado.' });
+      }
+
+      const u = userList[0];
+      const isMatch = await bcrypt.compare(currentPassword, u.password);
+      if (!isMatch) {
+        return reply.code(400).send({ error: 'La contraseña actual no es correcta.' });
+      }
+
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+      await db.update(users)
+        .set({ password: hashedPassword })
+        .where(eq(users.id, authUser.id));
+
+      return {
+        success: true,
+        message: 'Contraseña actualizada correctamente.'
+      };
+    } catch (err: any) {
+      fastify.log.error(err);
+      return reply.code(401).send({ error: 'No autorizado o token expirado' });
+    }
+  });
+
   // 1. Solicitar código de recuperación de contraseña (6 dígitos)
   fastify.post('/api/auth/forgot-password', async (req, reply) => {
     const { email } = req.body as any;

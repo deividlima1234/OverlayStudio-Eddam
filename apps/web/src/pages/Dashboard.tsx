@@ -23,10 +23,14 @@ import {
 } from 'lucide-react';
 import { OVERLAY_STARTER_TEMPLATES, generateAIPrompt } from '../templates/overlayTemplates';
 import { useAuthStore } from '../store/useAuthStore';
+import ProfileModal from '../components/ProfileModal';
 
 export default function Dashboard() {
   const navigate = useNavigate();
   const { user, logout, getAuthHeaders } = useAuthStore();
+
+  // Modal de Perfil y Configuración
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
 
   // Estado para los proyectos desde la DB
   const [projects, setProjects] = useState<any[]>([]);
@@ -314,21 +318,26 @@ export default function Dashboard() {
         </div>
         <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
           {user && (
-            <div className="flex items-center gap-2.5 bg-surface/80 border border-white/10 px-3 py-1.5 rounded-xl shadow-sm">
+            <button
+              type="button"
+              onClick={() => setIsProfileOpen(true)}
+              className="flex items-center gap-2.5 bg-surface/80 hover:bg-white/10 border border-white/10 hover:border-primary/50 px-3 py-1.5 rounded-xl shadow-sm transition-all active:scale-95 cursor-pointer group"
+              title="Configurar perfil y cuenta"
+            >
               <img 
                 src={user.avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(user.email)}`} 
                 alt="Avatar" 
-                className="w-7 h-7 rounded-lg bg-primary/20 p-0.5 border border-primary/30 shrink-0" 
+                className="w-7 h-7 rounded-lg bg-primary/20 p-0.5 border border-primary/30 shrink-0 group-hover:scale-105 transition-transform" 
               />
               <div className="text-left text-xs leading-tight">
-                <span className="font-bold text-white block truncate max-w-[120px] sm:max-w-[150px]">
+                <span className="font-bold text-white block truncate max-w-[120px] sm:max-w-[150px] group-hover:text-primary transition-colors">
                   {user.name}
                 </span>
                 <span className="text-[10px] text-zinc-400 font-mono truncate block max-w-[120px]">
                   {user.email}
                 </span>
               </div>
-            </div>
+            </button>
           )}
 
           <button 
@@ -876,6 +885,9 @@ export default function Dashboard() {
           </div>
         </div>
       )}
+
+      {/* Modal de Perfil y Configuración de Usuario */}
+      <ProfileModal isOpen={isProfileOpen} onClose={() => setIsProfileOpen(false)} />
 
       {/* Toast de Notificación */}
       {toast && (

@@ -15,6 +15,7 @@ interface AuthState {
   
   // Acciones
   setAuth: (user: UserProfile, token: string) => void;
+  updateUser: (partial: Partial<UserProfile>) => void;
   logout: () => void;
   checkAuth: () => Promise<boolean>;
   getAuthHeaders: () => Record<string, string>;
@@ -44,6 +45,14 @@ export const useAuthStore = create<AuthState>((set, get) => {
       localStorage.setItem('eddam_user', JSON.stringify(user));
       localStorage.setItem('eddam_token', token);
       set({ user, token, isAuthenticated: true, isLoading: false });
+    },
+
+    updateUser: (partial: Partial<UserProfile>) => {
+      const current = get().user;
+      if (!current) return;
+      const updated = { ...current, ...partial };
+      localStorage.setItem('eddam_user', JSON.stringify(updated));
+      set({ user: updated });
     },
 
     logout: () => {

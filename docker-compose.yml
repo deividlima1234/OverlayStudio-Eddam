@@ -25,8 +25,8 @@ services:
   # ==========================================
   api:
     build:
-      context: .
-      dockerfile: apps/api/Dockerfile
+      context: apps/api
+      dockerfile: Dockerfile
     container_name: overlay_api
     restart: unless-stopped
     environment:
@@ -52,8 +52,8 @@ services:
   # ==========================================
   web:
     build:
-      context: .
-      dockerfile: apps/web/Dockerfile
+      context: apps/web
+      dockerfile: Dockerfile
       args:
         - VITE_API_URL=${VITE_API_URL:-}
     container_name: overlay_web

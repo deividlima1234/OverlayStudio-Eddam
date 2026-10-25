@@ -5,24 +5,15 @@ FROM node:22-alpine AS builder
 
 WORKDIR /app
 
-# Instalar pnpm
-RUN npm install -g pnpm@12.10.1
+# Instalar dependencias
+COPY package.json tsconfig.json ./
+RUN npm install
 
-# Copiar configuración del monorepo y dependencias
-COPY pnpm-lock.yaml pnpm-workspace.yaml package.json tsconfig.base.json ./
-COPY apps/api/package.json ./apps/api/
-COPY apps/web/package.json ./apps/web/
-COPY apps/renderer/package.json ./apps/renderer/
-COPY packages/ ./packages/
-
-# Instalar todas las dependencias para compilar
-RUN pnpm install --frozen-lockfile
-
-# Copiar código fuente de la API
-COPY apps/api/ ./apps/api/
+# Copiar código fuente
+COPY src/ ./src/
 
 # Compilar TypeScript
-RUN pnpm --filter api build
+RUN npm run build
 
 # ==========================================
 # 2. RUNNER STAGE (PRODUCCIÓN LIGERA)
@@ -35,21 +26,10 @@ ENV NODE_ENV=production
 ENV PORT=3000
 ENV HOST=0.0.0.0
 
-RUN npm install -g pnpm@12.10.1
+COPY package.json ./
+RUN npm install --omit=dev
 
-# Copiar dependencias de producción
-COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
-COPY apps/api/package.json ./apps/api/
-COPY apps/web/package.json ./apps/web/
-COPY apps/renderer/package.json ./apps/renderer/
-COPY packages/ ./packages/
-
-RUN pnpm install --prod --frozen-lockfile
-
-# Copiar dist compilado
-COPY --from=builder /app/apps/api/dist ./apps/api/dist
-
-WORKDIR /app/apps/api
+COPY --from=builder /app/dist ./dist
 
 EXPOSE 3000
 

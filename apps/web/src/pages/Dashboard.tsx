@@ -19,11 +19,15 @@ import {
   Sparkles,
   FileCode,
   Home,
-  LogOut
+  LogOut,
+  Globe,
+  Lock,
+  ExternalLink
 } from 'lucide-react';
 import { OVERLAY_STARTER_TEMPLATES, generateAIPrompt } from '../templates/overlayTemplates';
 import { useAuthStore } from '../store/useAuthStore';
 import ProfileModal from '../components/ProfileModal';
+import { getApiUrl } from '../utils/apiUrl';
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -32,23 +36,29 @@ export default function Dashboard() {
   // Modal de Perfil y Configuración
   const [isProfileOpen, setIsProfileOpen] = useState(false);
 
-  // Estado para los proyectos desde la DB
+  // Pestañas: 'my' = Mis Proyectos, 'community' = Comunidad
+  const [activeTab, setActiveTab] = useState<'my' | 'community'>('my');
+
+  // Estado para los proyectos propios desde la DB
   const [projects, setProjects] = useState<any[]>([]);
   const [isProjectsLoading, setIsProjectsLoading] = useState(true);
 
-  useEffect(() => {
-    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+  // Estado para los proyectos públicos de la comunidad
+  const [communityProjects, setCommunityProjects] = useState<any[]>([]);
+  const [isCommunityLoading, setIsCommunityLoading] = useState(false);
+  const [cloningId, setCloningId] = useState<string | null>(null);
+
+  const fetchMyProjects = () => {
+    const API_URL = getApiUrl();
     setIsProjectsLoading(true);
-    fetch(`${API_URL}/api/overlays`, {
+    fetch(`${API_URL}/api/overlays?tab=my`, {
       headers: { ...getAuthHeaders() }
     })
       .then(res => res.json())
       .then(data => {
         if (data && Array.isArray(data) && data.length > 0) {
-          // Mapeamos los datos de la DB para la UI
           setProjects(data.map((p: any) => ({ ...p, overlays: p.type === 'publicidad' || p.type === 'custom' ? 1 : 3 })));
         } else {
-          // Proyectos de inicio limpios para nuevos usuarios
           setProjects([]);
         }
       })
@@ -57,13 +67,45 @@ export default function Dashboard() {
         setProjects([]);
       })
       .finally(() => setIsProjectsLoading(false));
+  };
+
+  const fetchCommunityProjects = () => {
+    const API_URL = getApiUrl();
+    setIsCommunityLoading(true);
+    fetch(`${API_URL}/api/overlays?tab=community`, {
+      headers: { ...getAuthHeaders() }
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data && Array.isArray(data)) {
+          setCommunityProjects(data.map((p: any) => ({ ...p, overlays: p.type === 'publicidad' || p.type === 'custom' ? 1 : 3 })));
+        } else {
+          setCommunityProjects([]);
+        }
+      })
+      .catch(e => {
+        console.error(e);
+        setCommunityProjects([]);
+      })
+      .finally(() => setIsCommunityLoading(false));
+  };
+
+  useEffect(() => {
+    fetchMyProjects();
   }, []);
+
+  useEffect(() => {
+    if (activeTab === 'community') {
+      fetchCommunityProjects();
+    }
+  }, [activeTab]);
 
   // Modal de Creación de Proyecto
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [newProjectName, setNewProjectName] = useState('');
   const [newProjectId, setNewProjectId] = useState('');
   const [newProjectType, setNewProjectType] = useState<'custom' | 'publicidad' | 'scoreboard' | 'lineup'>('custom');
+  const [newProjectIsPublic, setNewProjectIsPublic] = useState(false); // Por defecto PRIVADO
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>('reportaje');
   const [customCodeInput, setCustomCodeInput] = useState<string>(
     OVERLAY_STARTER_TEMPLATES.find(t => t.id === 'reportaje')?.code || OVERLAY_STARTER_TEMPLATES[0].code
@@ -90,6 +132,7 @@ export default function Dashboard() {
 
   const openCreateModal = (type: 'custom' | 'publicidad' = 'custom') => {
     setNewProjectType(type);
+    setNewProjectIsPublic(false); // Siempre inicia en PRIVADO por defecto
     if (type === 'publicidad') {
       const defaultName = 'Publicidad & Auspiciadores ' + (projects.filter(p => p.type === 'publicidad').length + 1);
       setNewProjectName(defaultName);
@@ -156,7 +199,7 @@ export default function Dashboard() {
         };
       }
 
-      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+      const API_URL = getApiUrl();
       const res = await fetch(`${API_URL}/api/overlays/${finalId}`, {
         method: 'POST',
         headers: { 
@@ -166,6 +209,7 @@ export default function Dashboard() {
         body: JSON.stringify({
           name: trimmedName,
           type: newProjectType,
+          isPublic: newProjectIsPublic,
           settings: initialSettings
         })
       });
@@ -175,7 +219,7 @@ export default function Dashboard() {
       }
 
       setIsCreateOpen(false);
-      showToast(`Proyecto "${trimmedName}" creado con éxito.`, 'success');
+      showToast(`Proyecto "${trimmedName}" creado con éxito (${newProjectIsPublic ? 'Público' : 'Privado'}).`, 'success');
       navigate(`/editor/${finalId}`);
     } catch (err: any) {
       console.error('Error al crear proyecto:', err);
@@ -188,6 +232,7 @@ export default function Dashboard() {
   const [modalProject, setModalProject] = useState<any>(null);
   const [editName, setEditName] = useState('');
   const [editId, setEditId] = useState('');
+  const [editIsPublic, setEditIsPublic] = useState(false);
   const [copied, setCopied] = useState(false);
   const [deleteProj, setDeleteProj] = useState<any>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -205,12 +250,13 @@ export default function Dashboard() {
     setModalProject(proj);
     setEditName(proj.name);
     setEditId(proj.id);
+    setEditIsPublic(Boolean(proj.isPublic));
     setCopied(false);
   };
 
   const saveSettings = async () => {
     if (modalProject) {
-      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+      const API_URL = getApiUrl();
       try {
         const res = await fetch(`${API_URL}/api/overlays/${editId}`, {
           method: 'POST',
@@ -218,7 +264,12 @@ export default function Dashboard() {
             'Content-Type': 'application/json',
             ...getAuthHeaders()
           },
-          body: JSON.stringify({ name: editName, type: modalProject.type, settings: modalProject.settings })
+          body: JSON.stringify({ 
+            name: editName, 
+            type: modalProject.type, 
+            isPublic: editIsPublic,
+            settings: modalProject.settings 
+          })
         });
         
         if (!res.ok) {
@@ -226,11 +277,11 @@ export default function Dashboard() {
         }
 
         if (editId !== modalProject.id) {
-           setProjects(prev => [...prev.filter(p => p.id !== modalProject.id), { ...modalProject, id: editId, name: editName }]);
+           setProjects(prev => [...prev.filter(p => p.id !== modalProject.id), { ...modalProject, id: editId, name: editName, isPublic: editIsPublic }]);
         } else {
-           setProjects(prev => prev.map(p => p.id === modalProject.id ? { ...p, name: editName } : p));
+           setProjects(prev => prev.map(p => p.id === modalProject.id ? { ...p, name: editName, isPublic: editIsPublic } : p));
         }
-        showToast('Configuración del proyecto guardada con éxito.', 'success');
+        showToast(`Configuración guardada (${editIsPublic ? '🌐 Público' : '🔒 Privado'}).`, 'success');
       } catch (e: any) {
         console.error(e);
         showToast(`Error al guardar configuración: ${e.message || 'Error de conexión'}`, 'error');
@@ -239,10 +290,46 @@ export default function Dashboard() {
     setModalProject(null);
   };
 
+  const handleCloneProject = async (e: React.MouseEvent, proj: any) => {
+    e.stopPropagation();
+    if (cloningId) return;
+    setCloningId(proj.id);
+    const API_URL = getApiUrl();
+    try {
+      const res = await fetch(`${API_URL}/api/overlays/${proj.id}/clone`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...getAuthHeaders()
+        },
+        body: JSON.stringify({
+          newName: `${proj.name} (Mi copia)`,
+          newId: `${slugify(proj.name)}-copia-${Math.random().toString(36).substring(2, 6)}`
+        })
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || `Código ${res.status}`);
+      }
+
+      const data = await res.json();
+      showToast(`¡Proyecto "${proj.name}" clonado con éxito en tus proyectos!`, 'success');
+      fetchMyProjects();
+      setActiveTab('my');
+      navigate(`/editor/${data.id}`);
+    } catch (err: any) {
+      console.error(err);
+      showToast(`Error al clonar proyecto: ${err.message}`, 'error');
+    } finally {
+      setCloningId(null);
+    }
+  };
+
   const handleDelete = async () => {
     if (!deleteProj || isDeleting) return;
     setIsDeleting(true);
-    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+    const API_URL = getApiUrl();
     const projNameToDelete = deleteProj.name;
     try {
       const res = await fetch(`${API_URL}/api/overlays/${deleteProj.id}`, { 
@@ -372,91 +459,247 @@ export default function Dashboard() {
       </header>
 
       <main>
-        <div className="flex items-center justify-between mb-4 sm:mb-6">
-          <h2 className="text-lg sm:text-xl font-semibold flex items-center gap-2 text-white">
-            <MonitorPlay className="w-5 h-5 sm:w-6 sm:h-6 text-primary shrink-0" />
-            <span>Proyectos Activos</span>
-          </h2>
-          <span className="text-xs text-textMuted sm:hidden font-medium">
-            {projects.length} {projects.length === 1 ? 'activo' : 'activos'}
-          </span>
-        </div>
-        
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-          {isProjectsLoading
-            ? Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="card p-5 sm:p-6 flex flex-col justify-between min-h-[140px] sm:min-h-[160px] animate-pulse">
-                  <div>
-                    <div className="flex justify-between items-start gap-2 mb-4">
-                      <div className="h-5 bg-white/10 rounded-lg w-3/4" />
-                      <div className="flex gap-1">
-                        <div className="w-8 h-8 rounded-lg bg-white/5" />
-                        <div className="w-8 h-8 rounded-lg bg-white/5" />
-                      </div>
-                    </div>
-                    <div className="h-5 bg-white/10 rounded-md w-1/3" />
-                  </div>
-                  <div className="flex items-center justify-between pt-3 mt-3 border-t border-border/30">
-                    <div className="h-3.5 bg-white/10 rounded w-1/3" />
-                    <div className="h-6 bg-white/10 rounded-md w-16" />
-                  </div>
-                </div>
-              ))
-            : projects.map((proj) => (
-                <div 
-                  key={proj.id} 
-                  className="card group cursor-pointer hover:-translate-y-1 active:scale-[0.99] transition-all p-5 sm:p-6 flex flex-col justify-between" 
-                  onClick={() => navigate(`/editor/${proj.id}`)}
-                >
-                  <div>
-                    <div className="flex justify-between items-start gap-2 mb-3">
-                      <h3 className="text-base sm:text-lg font-bold group-hover:text-primary transition-colors line-clamp-2 leading-snug">
-                        {proj.name}
-                      </h3>
-                      <div className="flex items-center gap-1 shrink-0 -mr-1 -mt-1">
-                        <button 
-                          onClick={(e) => openModal(e, proj)}
-                          className="p-2 hover:bg-white/10 active:bg-white/20 rounded-lg transition-colors text-textMuted hover:text-white"
-                          title="Configurar Proyecto"
-                          aria-label="Configurar Proyecto"
-                        >
-                          <Settings className="w-5 h-5" />
-                        </button>
-                        <button 
-                          onClick={(e) => { e.stopPropagation(); setDeleteProj(proj); }}
-                          className="p-2 hover:bg-red-500/20 active:bg-red-500/30 rounded-lg transition-colors text-textMuted hover:text-red-400"
-                          title="Eliminar Proyecto"
-                          aria-label="Eliminar Proyecto"
-                        >
-                          <Trash2 className="w-5 h-5" />
-                        </button>
-                      </div>
-                    </div>
-                    <div className="mb-3">
-                      {getProjectTypeBadge(proj.type)}
-                    </div>
-                  </div>
+        {/* Selector de Pestañas: Mis Proyectos vs Comunidad */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+          <div className="flex items-center gap-2 bg-surface/70 p-1.5 rounded-xl border border-white/10 w-fit shadow-inner">
+            <button
+              type="button"
+              onClick={() => setActiveTab('my')}
+              className={`flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-bold transition-all ${
+                activeTab === 'my'
+                  ? 'bg-primary text-black shadow-lg shadow-primary/20 scale-[1.02]'
+                  : 'text-textMuted hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <MonitorPlay className="w-4 h-4 shrink-0" />
+              <span>Mis Proyectos</span>
+              <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-mono ${activeTab === 'my' ? 'bg-black/20 text-black font-bold' : 'bg-white/10 text-zinc-300'}`}>
+                {projects.length}
+              </span>
+            </button>
 
-                  <div className="flex items-center justify-between text-xs sm:text-sm text-textMuted pt-3 mt-2 border-t border-border/60">
-                    <span>{proj.overlays} Overlays activos</span>
-                    <span className="bg-surfaceHover px-2.5 py-1 rounded-md text-xs font-medium border border-border flex items-center gap-1.5 text-emerald-400">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                      Online
-                    </span>
-                  </div>
-                </div>
-              ))
-          }
-          
-          <div 
-            onClick={() => openCreateModal('publicidad')} 
-            className="card border-dashed border-2 border-white/20 hover:border-primary flex flex-col items-center justify-center text-textMuted hover:text-white cursor-pointer active:scale-[0.99] transition-all min-h-[140px] sm:min-h-[160px] p-6 text-center group"
-          >
-            <PlusCircle className="w-7 h-7 sm:w-8 sm:h-8 mb-2 opacity-60 group-hover:opacity-100 group-hover:text-primary transition-all group-hover:scale-110" />
-            <p className="font-semibold text-sm sm:text-base text-white">Crear un proyecto de Publicidad</p>
-            <span className="text-xs text-textMuted mt-1">O crea un overlay con código programable</span>
+            <button
+              type="button"
+              onClick={() => setActiveTab('community')}
+              className={`flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-bold transition-all ${
+                activeTab === 'community'
+                  ? 'bg-primary text-black shadow-lg shadow-primary/20 scale-[1.02]'
+                  : 'text-textMuted hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <Globe className="w-4 h-4 shrink-0" />
+              <span>Comunidad</span>
+              <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-mono ${activeTab === 'community' ? 'bg-black/20 text-black font-bold' : 'bg-white/10 text-zinc-300'}`}>
+                {communityProjects.length > 0 ? communityProjects.length : 'Explorar'}
+              </span>
+            </button>
+          </div>
+
+          <div className="flex items-center gap-2 text-xs text-textMuted">
+            {activeTab === 'my' ? (
+              <span className="flex items-center gap-1.5">
+                <Lock className="w-3.5 h-3.5 text-zinc-400" />
+                <span>Por defecto tus overlays son <strong className="text-zinc-300">privados</strong>. Cámbialos a públicos para compartirlos.</span>
+              </span>
+            ) : (
+              <span className="flex items-center gap-1.5">
+                <Globe className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Overlays compartidos públicamente por la comunidad de creadores.</span>
+              </span>
+            )}
           </div>
         </div>
+
+        {/* Pestaña: COMUNIDAD */}
+        {activeTab === 'community' ? (
+          <div>
+            {isCommunityLoading ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className="card p-5 sm:p-6 min-h-[160px] animate-pulse">
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="w-7 h-7 rounded-lg bg-white/10" />
+                      <div className="h-4 bg-white/10 rounded w-1/3" />
+                    </div>
+                    <div className="h-5 bg-white/10 rounded w-3/4 mb-3" />
+                    <div className="h-4 bg-white/10 rounded w-1/4 mb-4" />
+                    <div className="h-8 bg-white/10 rounded" />
+                  </div>
+                ))}
+              </div>
+            ) : communityProjects.length === 0 ? (
+              <div className="card p-10 sm:p-14 text-center border-dashed border-2 border-white/20">
+                <div className="w-14 h-14 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center mx-auto mb-3 text-primary">
+                  <Globe className="w-7 h-7 opacity-80" />
+                </div>
+                <h3 className="text-base sm:text-lg font-bold text-white">Aún no hay proyectos públicos en la comunidad</h3>
+                <p className="text-xs sm:text-sm text-textMuted mt-1.5 max-w-md mx-auto leading-relaxed">
+                  ¡Sé el primero en compartir! Ve a <strong className="text-white">Mis Proyectos</strong>, haz clic en el engranaje ⚙️ de cualquiera de tus overlays y cámbialo a <strong className="text-emerald-400">Público</strong>.
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                {communityProjects.map((proj) => (
+                  <div
+                    key={proj.id}
+                    className="card group hover:-translate-y-1 active:scale-[0.99] transition-all p-5 sm:p-6 flex flex-col justify-between border-white/10 hover:border-primary/40 shadow-lg relative"
+                  >
+                    <div>
+                      {/* Cabecera de Autor / Creador */}
+                      <div className="flex items-center justify-between gap-2 mb-3.5 pb-3 border-b border-white/5">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <img
+                            src={proj.authorAvatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(proj.authorName || proj.id)}`}
+                            alt={proj.authorName}
+                            className="w-7 h-7 rounded-lg bg-primary/10 p-0.5 border border-primary/20 shrink-0"
+                          />
+                          <div className="min-w-0">
+                            <span className="text-[10px] text-zinc-400 uppercase tracking-wider block font-semibold leading-none mb-0.5">
+                              Creado por
+                            </span>
+                            <span className="text-xs font-bold text-white truncate block">
+                              {proj.authorName}
+                            </span>
+                          </div>
+                        </div>
+                        <span className="bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded text-[10px] font-bold shrink-0 flex items-center gap-1">
+                          <Globe className="w-3 h-3" /> Público
+                        </span>
+                      </div>
+
+                      {/* Nombre y Tipo */}
+                      <h3 className="text-base sm:text-lg font-bold text-white group-hover:text-primary transition-colors line-clamp-2 leading-snug mb-2.5">
+                        {proj.name}
+                      </h3>
+                      <div className="mb-4">
+                        {getProjectTypeBadge(proj.type)}
+                      </div>
+                    </div>
+
+                    {/* Acciones para la comunidad */}
+                    <div className="pt-3 border-t border-border/60 flex items-center gap-2.5 mt-2">
+                      <a
+                        href={`/render/${proj.id}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="btn-secondary flex-1 flex items-center justify-center gap-1.5 py-2 text-xs text-textMuted hover:text-white"
+                        title="Ver salida OBS en vivo"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                        <span>Ver Demo</span>
+                      </a>
+                      <button
+                        onClick={(e) => handleCloneProject(e, proj)}
+                        disabled={cloningId === proj.id}
+                        className="btn-primary flex-1 flex items-center justify-center gap-1.5 py-2 text-xs disabled:opacity-50"
+                        title="Clonar como tu propia plantilla"
+                      >
+                        {cloningId === proj.id ? (
+                          <span className="w-3.5 h-3.5 border-2 border-black border-t-transparent rounded-full animate-spin"></span>
+                        ) : (
+                          <Copy className="w-3.5 h-3.5" />
+                        )}
+                        <span>{cloningId === proj.id ? 'Clonando...' : 'Usar Plantilla'}</span>
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : (
+          /* Pestaña: MIS PROYECTOS */
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+            {isProjectsLoading
+              ? Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className="card p-5 sm:p-6 flex flex-col justify-between min-h-[140px] sm:min-h-[160px] animate-pulse">
+                    <div>
+                      <div className="flex justify-between items-start gap-2 mb-4">
+                        <div className="h-5 bg-white/10 rounded-lg w-3/4" />
+                        <div className="flex gap-1">
+                          <div className="w-8 h-8 rounded-lg bg-white/5" />
+                          <div className="w-8 h-8 rounded-lg bg-white/5" />
+                        </div>
+                      </div>
+                      <div className="h-5 bg-white/10 rounded-md w-1/3" />
+                    </div>
+                    <div className="flex items-center justify-between pt-3 mt-3 border-t border-border/30">
+                      <div className="h-3.5 bg-white/10 rounded w-1/3" />
+                      <div className="h-6 bg-white/10 rounded-md w-16" />
+                    </div>
+                  </div>
+                ))
+              : projects.map((proj) => (
+                  <div 
+                    key={proj.id} 
+                    className="card group cursor-pointer hover:-translate-y-1 active:scale-[0.99] transition-all p-5 sm:p-6 flex flex-col justify-between" 
+                    onClick={() => navigate(`/editor/${proj.id}`)}
+                  >
+                    <div>
+                      <div className="flex justify-between items-start gap-2 mb-3">
+                        <h3 className="text-base sm:text-lg font-bold group-hover:text-primary transition-colors line-clamp-2 leading-snug">
+                          {proj.name}
+                        </h3>
+                        <div className="flex items-center gap-1 shrink-0 -mr-1 -mt-1">
+                          <button 
+                            onClick={(e) => openModal(e, proj)}
+                            className="p-2 hover:bg-white/10 active:bg-white/20 rounded-lg transition-colors text-textMuted hover:text-white"
+                            title="Configurar Proyecto (Nombre, ID, Privacidad)"
+                            aria-label="Configurar Proyecto"
+                          >
+                            <Settings className="w-5 h-5" />
+                          </button>
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); setDeleteProj(proj); }}
+                            className="p-2 hover:bg-red-500/20 active:bg-red-500/30 rounded-lg transition-colors text-textMuted hover:text-red-400"
+                            title="Eliminar Proyecto"
+                            aria-label="Eliminar Proyecto"
+                          >
+                            <Trash2 className="w-5 h-5" />
+                          </button>
+                        </div>
+                      </div>
+                      <div className="mb-3 flex items-center gap-2 flex-wrap">
+                        {getProjectTypeBadge(proj.type)}
+                        {proj.isPublic ? (
+                          <span 
+                            className="bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded text-[10px] sm:text-[11px] font-bold inline-flex items-center gap-1"
+                            title="Visible en la pestaña Comunidad para otros usuarios"
+                          >
+                            <Globe className="w-3 h-3" /> Público
+                          </span>
+                        ) : (
+                          <span 
+                            className="bg-zinc-800 text-zinc-400 border border-white/10 px-2 py-0.5 rounded text-[10px] sm:text-[11px] font-medium inline-flex items-center gap-1"
+                            title="Solo tú puedes ver y transmitir este proyecto"
+                          >
+                            <Lock className="w-3 h-3" /> Privado
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between text-xs sm:text-sm text-textMuted pt-3 mt-2 border-t border-border/60">
+                      <span>{proj.overlays} Overlays activos</span>
+                      <span className="bg-surfaceHover px-2.5 py-1 rounded-md text-xs font-medium border border-border flex items-center gap-1.5 text-emerald-400">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                        Online
+                      </span>
+                    </div>
+                  </div>
+                ))
+            }
+            
+            <div 
+              onClick={() => openCreateModal('publicidad')} 
+              className="card border-dashed border-2 border-white/20 hover:border-primary flex flex-col items-center justify-center text-textMuted hover:text-white cursor-pointer active:scale-[0.99] transition-all min-h-[140px] sm:min-h-[160px] p-6 text-center group"
+            >
+              <PlusCircle className="w-7 h-7 sm:w-8 sm:h-8 mb-2 opacity-60 group-hover:opacity-100 group-hover:text-primary transition-all group-hover:scale-110" />
+              <p className="font-semibold text-sm sm:text-base text-white">Crear un proyecto de Publicidad</p>
+              <span className="text-xs text-textMuted mt-1">O crea un overlay con código programable</span>
+            </div>
+          </div>
+        )}
       </main>
 
       {/* Modal de Creación de Proyecto */}
@@ -609,6 +852,57 @@ export default function Dashboard() {
                       <span className="text-sm font-bold text-white">Alineación Táctica</span>
                       <p className="text-xs text-textMuted mt-0.5 leading-snug">
                         Esquema táctico de cancha para Fútbol 11, 9, 7 o 5 con titulares.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Selector de Privacidad */}
+              <div>
+                <label className="block text-xs sm:text-sm font-bold text-textMuted mb-2">
+                  Visibilidad y Privacidad
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <div 
+                    onClick={() => setNewProjectIsPublic(false)}
+                    className={`p-3.5 rounded-xl border cursor-pointer transition-all flex items-start gap-3 ${
+                      !newProjectIsPublic 
+                        ? 'bg-zinc-800/90 border-white/40 shadow-lg shadow-black/40 ring-1 ring-white/20' 
+                        : 'bg-surfaceHover/50 border-white/5 hover:border-white/20'
+                    }`}
+                  >
+                    <div className={`p-2 rounded-lg shrink-0 ${!newProjectIsPublic ? 'bg-zinc-700 text-white' : 'bg-white/10 text-zinc-400'}`}>
+                      <Lock className="w-5 h-5" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-1">
+                        <span className="text-sm font-bold text-white">Privado</span>
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-zinc-700 text-zinc-300 border border-white/10">
+                          Recomendado
+                        </span>
+                      </div>
+                      <p className="text-xs text-textMuted mt-0.5 leading-snug">
+                        Solo tú puedes ver y transmitir este overlay. Oculto para otros usuarios.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div 
+                    onClick={() => setNewProjectIsPublic(true)}
+                    className={`p-3.5 rounded-xl border cursor-pointer transition-all flex items-start gap-3 ${
+                      newProjectIsPublic 
+                        ? 'bg-emerald-500/15 border-emerald-500 shadow-lg shadow-emerald-500/10 ring-1 ring-emerald-500/30' 
+                        : 'bg-surfaceHover/50 border-white/5 hover:border-white/20'
+                    }`}
+                  >
+                    <div className={`p-2 rounded-lg shrink-0 ${newProjectIsPublic ? 'bg-emerald-500 text-black' : 'bg-white/10 text-white'}`}>
+                      <Globe className="w-5 h-5" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <span className="text-sm font-bold text-white">Público</span>
+                      <p className="text-xs text-textMuted mt-0.5 leading-snug">
+                        Visible en la pestaña Comunidad con tu nombre de autor para que otros streamers lo usen.
                       </p>
                     </div>
                   </div>
@@ -789,6 +1083,50 @@ export default function Dashboard() {
                   onChange={(e) => setEditName(e.target.value)}
                   placeholder="Ej: Final de Temporada..."
                 />
+              </div>
+
+              {/* Selector de Visibilidad / Privacidad */}
+              <div>
+                <label className="block text-xs sm:text-sm font-bold text-textMuted mb-2">Visibilidad del Proyecto</label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <div
+                    onClick={() => setEditIsPublic(false)}
+                    className={`p-3 rounded-xl border cursor-pointer transition-all flex items-start gap-3 ${
+                      !editIsPublic
+                        ? 'bg-zinc-800/90 border-white/40 ring-1 ring-white/20 shadow-md'
+                        : 'bg-black/20 border-white/5 hover:border-white/20 opacity-70 hover:opacity-100'
+                    }`}
+                  >
+                    <div className={`p-2 rounded-lg shrink-0 ${!editIsPublic ? 'bg-zinc-700 text-white' : 'bg-white/10 text-zinc-400'}`}>
+                      <Lock className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <span className="text-xs sm:text-sm font-bold text-white block">Privado</span>
+                      <span className="text-[11px] text-textMuted leading-tight block mt-0.5">
+                        Solo visible en tu cuenta. Oculto para otros.
+                      </span>
+                    </div>
+                  </div>
+
+                  <div
+                    onClick={() => setEditIsPublic(true)}
+                    className={`p-3 rounded-xl border cursor-pointer transition-all flex items-start gap-3 ${
+                      editIsPublic
+                        ? 'bg-emerald-500/15 border-emerald-500 ring-1 ring-emerald-500/30 shadow-md'
+                        : 'bg-black/20 border-white/5 hover:border-white/20 opacity-70 hover:opacity-100'
+                    }`}
+                  >
+                    <div className={`p-2 rounded-lg shrink-0 ${editIsPublic ? 'bg-emerald-500 text-black' : 'bg-white/10 text-white'}`}>
+                      <Globe className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <span className="text-xs sm:text-sm font-bold text-white block">Público</span>
+                      <span className="text-[11px] text-textMuted leading-tight block mt-0.5">
+                        Visible en la pestaña Comunidad con tu autoría.
+                      </span>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               <div>

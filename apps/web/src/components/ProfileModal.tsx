@@ -17,6 +17,7 @@ import {
   KeyRound
 } from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore';
+import { getApiUrl } from '../utils/apiUrl';
 
 interface ProfileModalProps {
   isOpen: boolean;
@@ -75,7 +76,7 @@ export default function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
 
   if (!isOpen || !user) return null;
 
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+  const API_URL = getApiUrl();
 
   // Generar semilla aleatoria para avatar
   const handleRandomAvatar = () => {

@@ -27,7 +27,9 @@ import {
   Zap,
   Trash2,
   Monitor,
-  Smartphone
+  Smartphone,
+  Lock,
+  Globe
 } from 'lucide-react';
 import { useOverlayStore } from '../store/useOverlayStore';
 import Scoreboard from '../components/Scoreboard';
@@ -46,6 +48,7 @@ import {
   type OverlayVariableDef 
 } from '../utils/variableParser';
 import { useAuthStore } from '../store/useAuthStore';
+import { getApiUrl } from '../utils/apiUrl';
 
 export default function Editor() {
   const { id } = useParams<{ id: string }>();
@@ -66,6 +69,38 @@ export default function Editor() {
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [projectName, setProjectName] = useState<string>('');
   const [isOverlayLoading, setIsOverlayLoading] = useState(true);
+  const [isForbidden, setIsForbidden] = useState(false);
+  const [projectMeta, setProjectMeta] = useState<{ isPublic?: boolean; isOwner?: boolean; authorName?: string; userId?: string } | null>(null);
+  const [isCloning, setIsCloning] = useState(false);
+
+  const handleCloneFromEditor = async () => {
+    if (!id || isCloning) return;
+    setIsCloning(true);
+    try {
+      const baseUrl = getApiUrl();
+      const res = await fetch(`${baseUrl}/api/overlays/${id}/clone`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...getAuthHeaders()
+        },
+        body: JSON.stringify({
+          newName: `${projectName || id} (Mi Copia)`
+        })
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || 'No se pudo clonar el proyecto');
+      }
+      const data = await res.json();
+      showToast(`¡Proyecto clonado exitosamente en tu cuenta!`, 'success');
+      navigate(`/editor/${data.id}`);
+    } catch (e: any) {
+      showToast(e.message || 'Error al clonar proyecto', 'error');
+    } finally {
+      setIsCloning(false);
+    }
+  };
 
   // --- Modo de Visualización de Pantalla (PC / Móvil Android) ---
   const [viewMode, setViewMode] = useState<ViewMode>('pc');
@@ -189,12 +224,26 @@ export default function Editor() {
       state.updateState({ customCode: '', overlayType: undefined, customVariables: {} });
       state.connectWebSocket('studio', id);
       
-      const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+      const baseUrl = getApiUrl();
       fetch(`${baseUrl}/api/overlays/${id}`, {
         headers: { ...getAuthHeaders() }
       })
-        .then(res => res.ok ? res.json() : null)
+        .then(async res => {
+          if (res.status === 403) {
+            setIsForbidden(true);
+            return null;
+          }
+          return res.ok ? res.json() : null;
+        })
         .then(data => {
+          if (!data) return;
+          setIsForbidden(false);
+          setProjectMeta({
+            isPublic: data.isPublic,
+            isOwner: data.isOwner,
+            authorName: data.authorName,
+            userId: data.userId
+          });
           if (data?.name) setProjectName(data.name);
           else setProjectName(id);
 
@@ -292,7 +341,7 @@ export default function Editor() {
 
     try {
       localStorage.setItem(`eddam_overlay_${overlayId}`, JSON.stringify(settingsToSave));
-      const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+      const baseUrl = getApiUrl();
       await fetch(`${baseUrl}/api/overlays/${overlayId}`, {
         method: 'POST',
         headers: { 
@@ -389,9 +438,13 @@ export default function Editor() {
   };
 
   const handleSave = async () => {
+    if (projectMeta && projectMeta.isOwner === false) {
+      showToast('No puedes sobreescribir este proyecto público ajeno. Usa "Clonar" para guardarlo como tu propia plantilla.', 'error');
+      return;
+    }
     setIsSaving(true);
     try {
-      const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+      const baseUrl = getApiUrl();
       const overlayId = id || 'default';
       
       const response = await fetch(`${baseUrl}/api/overlays/${overlayId}`, {
@@ -402,6 +455,7 @@ export default function Editor() {
         },
         body: JSON.stringify({
           type: state.overlayType,
+          isPublic: projectMeta?.isPublic,
           settings: {
             isVisible: state.isVisible,
             customCode: localCode || state.customCode,
@@ -486,6 +540,31 @@ export default function Editor() {
     }
   };
 
+  if (isForbidden) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <div className="card max-w-md w-full p-8 text-center space-y-4 border-red-500/30 shadow-2xl">
+          <div className="w-16 h-16 rounded-full bg-red-500/20 border border-red-500/40 flex items-center justify-center mx-auto text-red-400">
+            <Lock className="w-8 h-8" />
+          </div>
+          <h2 className="text-xl font-bold text-white">Proyecto Privado</h2>
+          <p className="text-sm text-textMuted leading-relaxed">
+            Este overlay ha sido configurado como <strong className="text-white">Privado</strong> por su creador. Solo el propietario tiene acceso para visualizarlo y editarlo.
+          </p>
+          <div className="pt-2">
+            <button
+              onClick={() => navigate('/dashboard')}
+              className="btn-primary w-full py-2.5 text-sm flex items-center justify-center gap-2"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>Volver a Mis Proyectos</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col lg:flex-row h-screen overflow-hidden bg-background font-sans">
       <aside
@@ -501,26 +580,69 @@ export default function Editor() {
           <div className="w-1 h-16 rounded-full bg-white/10 group-hover:bg-primary/70 group-active:bg-primary transition-colors duration-150" />
         </div>
         <div className="px-4 py-3 border-b border-border flex items-center gap-2 justify-between">
-          <button onClick={() => navigate('/')} className="p-2 hover:bg-surfaceHover rounded-lg transition-colors text-textMuted shrink-0">
+          <button onClick={() => navigate('/dashboard')} className="p-2 hover:bg-surfaceHover rounded-lg transition-colors text-textMuted shrink-0" title="Volver al Panel">
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div className="flex-1 min-w-0 text-center">
             <p className="text-[10px] font-bold uppercase tracking-widest text-textMuted leading-none mb-0.5">Panel de Control</p>
-            <h2
-              className="text-sm font-bold text-white truncate leading-snug"
-              title={projectName || id}
-            >
-              {projectName || id || '...'}
-            </h2>
+            <div className="flex items-center justify-center gap-1.5 min-w-0">
+              <h2
+                className="text-sm font-bold text-white truncate leading-snug"
+                title={projectName || id}
+              >
+                {projectName || id || '...'}
+              </h2>
+              {projectMeta && (
+                <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold inline-flex items-center gap-1 shrink-0 ${
+                  projectMeta.isPublic 
+                    ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' 
+                    : 'bg-zinc-800 text-zinc-400 border border-white/10'
+                }`}>
+                  {projectMeta.isPublic ? <Globe className="w-2.5 h-2.5" /> : <Lock className="w-2.5 h-2.5" />}
+                  {projectMeta.isPublic ? 'Público' : 'Privado'}
+                </span>
+              )}
+            </div>
           </div>
-          <button 
-            onClick={handleSave} 
-            disabled={isSaving}
-            className={`btn-primary px-3 py-1.5 text-sm flex items-center gap-2 shrink-0 ${isSaving ? 'opacity-50 cursor-wait' : ''}`}
-          >
-            <Save className="w-4 h-4" /> {isSaving ? 'Guardando...' : 'Guardar'}
-          </button>
+          {projectMeta && projectMeta.isOwner === false ? (
+            <button
+              onClick={handleCloneFromEditor}
+              disabled={isCloning}
+              className="btn-primary px-3 py-1.5 text-xs flex items-center gap-1.5 shrink-0"
+              title="Clonar este proyecto a tu cuenta para editarlo"
+            >
+              <Copy className="w-3.5 h-3.5" />
+              <span>{isCloning ? 'Clonando...' : 'Clonar'}</span>
+            </button>
+          ) : (
+            <button 
+              onClick={handleSave} 
+              disabled={isSaving}
+              className={`btn-primary px-3 py-1.5 text-sm flex items-center gap-2 shrink-0 ${isSaving ? 'opacity-50 cursor-wait' : ''}`}
+            >
+              <Save className="w-4 h-4" /> {isSaving ? 'Guardando...' : 'Guardar'}
+            </button>
+          )}
         </div>
+
+        {projectMeta && projectMeta.isOwner === false && (
+          <div className="bg-amber-500/15 border-b border-amber-500/30 px-3.5 py-2 flex items-center justify-between gap-2 text-xs">
+            <div className="flex items-center gap-2 min-w-0">
+              <Globe className="w-4 h-4 text-amber-400 shrink-0" />
+              <span className="text-amber-200 truncate">
+                Proyecto público de <strong className="text-white">{projectMeta.authorName || 'la comunidad'}</strong>
+              </span>
+            </div>
+            <button
+              onClick={handleCloneFromEditor}
+              disabled={isCloning}
+              className="bg-amber-500 hover:bg-amber-400 text-black font-bold px-2 py-0.5 rounded text-[11px] shrink-0 transition-all flex items-center gap-1"
+            >
+              <Copy className="w-3 h-3" />
+              <span>{isCloning ? 'Clonando...' : 'Clonar'}</span>
+            </button>
+          </div>
+        )}
 
         <div className="flex border-b border-border">
           <button 

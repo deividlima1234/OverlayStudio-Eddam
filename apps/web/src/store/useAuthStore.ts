@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { getApiUrl } from '../utils/apiUrl';
 
 export interface UserProfile {
   id: string;
@@ -73,7 +74,7 @@ export const useAuthStore = create<AuthState>((set, get) => {
         return true;
       }
 
-      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+      const API_URL = getApiUrl();
       try {
         const res = await fetch(`${API_URL}/api/auth/me`, {
           headers: { Authorization: `Bearer ${token}` }

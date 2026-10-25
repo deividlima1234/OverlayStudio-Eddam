@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { getApiUrl } from '../utils/apiUrl';
 
 interface OverlayState {
   // Datos
@@ -168,7 +169,7 @@ export const useOverlayStore = create<OverlayState>((set, get) => ({
   
   loadOverlay: async (overlayId = 'default') => {
     try {
-      const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+      const baseUrl = getApiUrl();
       const res = await fetch(`${baseUrl}/api/overlays/${overlayId}`);
       if (res.ok) {
         const data = await res.json();

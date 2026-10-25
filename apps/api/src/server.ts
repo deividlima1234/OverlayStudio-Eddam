@@ -466,7 +466,7 @@ fastify.register(async function (fastify) {
   // Guardar / Actualizar Overlay (Protegido por usuario)
   fastify.post('/api/overlays/:id', async (req, reply) => {
     const { id } = req.params as { id: string };
-    const { name, type, settings } = req.body as any;
+    const { name, type, settings, isPublic } = req.body as any;
     const user = await getAuthUser(req);
     const userId = user ? user.id : null;
 
@@ -486,6 +486,9 @@ fastify.register(async function (fastify) {
         const updateData: any = { settings, updatedAt: new Date() };
         if (name) updateData.name = name;
         if (type) updateData.type = type;
+        if (isPublic !== undefined) {
+          updateData.isPublic = Boolean(isPublic);
+        }
         // Si no tenía dueño asignado previamente, vincularlo al usuario actual
         if (!currentOverlay.userId && userId) {
           updateData.userId = userId;
@@ -493,16 +496,69 @@ fastify.register(async function (fastify) {
 
         await db.update(overlays).set(updateData).where(eq(overlays.id, id));
       } else {
-        // Crear nuevo overlay asociado al usuario autenticado
+        // Crear nuevo overlay asociado al usuario autenticado (por defecto PRIVADO si no se especifica)
         await db.insert(overlays).values({ 
           id, 
           userId,
           name: name || 'Proyecto Sin Nombre', 
           type: type || 'publicidad', 
+          isPublic: isPublic !== undefined ? Boolean(isPublic) : false,
           settings: settings || {} 
         });
       }
       return { success: true };
+    } catch (error: any) {
+      reply.code(500).send({ error: error.message });
+    }
+  });
+
+  // Clonar Proyecto Público o Propio
+  fastify.post('/api/overlays/:id/clone', async (req, reply) => {
+    const user = await getAuthUser(req);
+    if (!user) {
+      return reply.code(401).send({ error: 'Debes iniciar sesión para clonar un proyecto.' });
+    }
+    const { id } = req.params as { id: string };
+    const { newName, newId } = (req.body as any) || {};
+
+    try {
+      const sourceList = await db.select().from(overlays).where(eq(overlays.id, id));
+      if (sourceList.length === 0) {
+        return reply.code(404).send({ error: 'Proyecto no encontrado' });
+      }
+      const source = sourceList[0];
+
+      // Solo se pueden clonar proyectos públicos o que pertenezcan al mismo usuario
+      if (!source.isPublic && source.userId && source.userId !== user.id) {
+        return reply.code(403).send({ error: 'No tienes permisos para clonar este proyecto privado.' });
+      }
+
+      const targetId = (newId && newId.trim()) || `${source.id}-copia-${Math.random().toString(36).substring(2, 7)}`;
+      const targetName = (newName && newName.trim()) || `${source.name} (Copia)`;
+
+      // Comprobar que no exista ya ese ID
+      const existing = await db.select().from(overlays).where(eq(overlays.id, targetId));
+      if (existing.length > 0) {
+        return reply.code(409).send({ error: `Ya existe un proyecto con el ID "${targetId}". Por favor elige otro ID.` });
+      }
+
+      await db.insert(overlays).values({
+        id: targetId,
+        userId: user.id,
+        name: targetName,
+        type: source.type,
+        isPublic: false, // Las copias clonadas inician privadas por defecto
+        settings: source.settings || {},
+        createdAt: new Date(),
+        updatedAt: new Date()
+      });
+
+      return {
+        success: true,
+        id: targetId,
+        name: targetName,
+        message: `Proyecto clonado con éxito en tu cuenta.`
+      };
     } catch (error: any) {
       reply.code(500).send({ error: error.message });
     }
@@ -532,37 +588,141 @@ fastify.register(async function (fastify) {
     }
   });
 
-  // Obtener Overlays (Filtrado estricto por usuario)
+  // Obtener Overlays (Mis Proyectos o Comunidad)
   fastify.get('/api/overlays', async (req, reply) => {
     const user = await getAuthUser(req);
+    const { tab } = req.query as { tab?: string };
 
     try {
+      if (tab === 'community') {
+        // Pestaña Comunidad: Proyectos explícitamente marcados como PÚBLICOS
+        const result = await db
+          .select({
+            id: overlays.id,
+            userId: overlays.userId,
+            name: overlays.name,
+            type: overlays.type,
+            isPublic: overlays.isPublic,
+            settings: overlays.settings,
+            createdAt: overlays.createdAt,
+            updatedAt: overlays.updatedAt,
+            authorName: users.name,
+            authorAvatar: users.avatar
+          })
+          .from(overlays)
+          .leftJoin(users, eq(overlays.userId, users.id))
+          .where(eq(overlays.isPublic, true))
+          .orderBy(desc(overlays.createdAt));
+
+        return result.map(p => ({
+          ...p,
+          authorName: p.authorName || 'Comunidad Overlay Studio',
+          authorAvatar: p.authorAvatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(p.id)}`,
+          isOwner: user ? p.userId === user.id : false
+        }));
+      }
+
+      // Pestaña por defecto: Mis Proyectos
       if (user) {
-        // Devuelve únicamente los overlays del usuario logueado o overlays demo sin dueño
-        const result = await db.select().from(overlays).where(
-          or(eq(overlays.userId, user.id), isNull(overlays.userId))
-        );
-        return result;
+        const result = await db
+          .select({
+            id: overlays.id,
+            userId: overlays.userId,
+            name: overlays.name,
+            type: overlays.type,
+            isPublic: overlays.isPublic,
+            settings: overlays.settings,
+            createdAt: overlays.createdAt,
+            updatedAt: overlays.updatedAt,
+            authorName: users.name,
+            authorAvatar: users.avatar
+          })
+          .from(overlays)
+          .leftJoin(users, eq(overlays.userId, users.id))
+          .where(or(eq(overlays.userId, user.id), isNull(overlays.userId)))
+          .orderBy(desc(overlays.createdAt));
+
+        return result.map(p => ({
+          ...p,
+          authorName: p.authorName || user.name,
+          authorAvatar: p.authorAvatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(user.email || p.id)}`,
+          isOwner: p.userId === user.id
+        }));
       } else {
         // Para visitantes no logueados, solo mostrar overlays demo públicos
-        const result = await db.select().from(overlays).where(isNull(overlays.userId));
-        return result;
+        const result = await db
+          .select({
+            id: overlays.id,
+            userId: overlays.userId,
+            name: overlays.name,
+            type: overlays.type,
+            isPublic: overlays.isPublic,
+            settings: overlays.settings,
+            createdAt: overlays.createdAt,
+            updatedAt: overlays.updatedAt,
+            authorName: users.name,
+            authorAvatar: users.avatar
+          })
+          .from(overlays)
+          .leftJoin(users, eq(overlays.userId, users.id))
+          .where(isNull(overlays.userId));
+
+        return result.map(p => ({
+          ...p,
+          authorName: p.authorName || 'Plantilla Demo',
+          authorAvatar: p.authorAvatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(p.id)}`,
+          isOwner: false
+        }));
       }
     } catch (error: any) {
       reply.code(500).send({ error: error.message });
     }
   });
 
-  // Obtener un Overlay específico (Permite a OBS leer la configuración del render de forma pública y segura)
+  // Obtener un Overlay específico (con verificación de permisos y datos del autor)
   fastify.get('/api/overlays/:id', async (req, reply) => {
     const { id } = req.params as { id: string };
+    const user = await getAuthUser(req);
     
     try {
-      const result = await db.select().from(overlays).where(eq(overlays.id, id));
-      if (result.length > 0) {
-        return result[0];
+      const result = await db
+        .select({
+          id: overlays.id,
+          userId: overlays.userId,
+          name: overlays.name,
+          type: overlays.type,
+          isPublic: overlays.isPublic,
+          settings: overlays.settings,
+          createdAt: overlays.createdAt,
+          updatedAt: overlays.updatedAt,
+          authorName: users.name,
+          authorAvatar: users.avatar
+        })
+        .from(overlays)
+        .leftJoin(users, eq(overlays.userId, users.id))
+        .where(eq(overlays.id, id));
+
+      if (result.length === 0) {
+        return reply.code(404).send({ error: 'Overlay no encontrado' });
       }
-      reply.code(404).send({ error: 'Overlay no encontrado' });
+
+      const overlay = result[0];
+      const isOwner = user ? overlay.userId === user.id : false;
+
+      // Si el proyecto es privado y pertenece a un usuario:
+      // Si quien lo solicita está autenticado y no es el dueño, denegar acceso al editor
+      if (!overlay.isPublic && overlay.userId && user && !isOwner) {
+        return reply.code(403).send({ 
+          error: 'Acceso Denegado: Este proyecto es privado y solo puede ser visto por su creador.',
+          isForbidden: true
+        });
+      }
+
+      return {
+        ...overlay,
+        authorName: overlay.authorName || 'Comunidad Overlay Studio',
+        isOwner
+      };
     } catch (error: any) {
       reply.code(500).send({ error: error.message });
     }
@@ -578,6 +738,15 @@ fastify.get('/', async () => {
 
 const start = async () => {
   try {
+    // Asegurar que la columna is_public exista en la base de datos
+    try {
+      await db.execute(sql`
+        ALTER TABLE overlays ADD COLUMN IF NOT EXISTS is_public BOOLEAN DEFAULT false NOT NULL;
+      `);
+    } catch (dbErr: any) {
+      console.warn('Verificación de esquema overlays:', dbErr?.message || dbErr);
+    }
+
     const port = process.env.PORT ? parseInt(process.env.PORT) : 3000;
     const host = process.env.HOST || '0.0.0.0';
     await fastify.listen({ port, host });

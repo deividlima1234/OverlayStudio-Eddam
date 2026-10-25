@@ -35,6 +35,7 @@ export const overlays = pgTable('overlays', {
   name: varchar('name', { length: 255 }).notNull(),
   visualConfig: jsonb('visual_config').notNull().default('{}'), // Properties like color, texts, etc
   uniqueToken: varchar('unique_token', { length: 64 }).notNull().unique(), // Used for OBS URL
+  isPublic: boolean('is_public').default(false).notNull(),
   isActive: boolean('is_active').default(true).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),

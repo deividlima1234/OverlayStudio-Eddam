@@ -23,6 +23,7 @@ export const overlays = pgTable("overlays", {
   userId: varchar("user_id", { length: 255 }),
   name: varchar("name", { length: 255 }).notNull(),
   type: varchar("type", { length: 50 }).notNull(),
+  isPublic: boolean("is_public").default(false).notNull(),
   settings: jsonb("settings").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),

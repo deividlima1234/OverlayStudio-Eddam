@@ -19,6 +19,7 @@ import {
   RotateCcw
 } from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore';
+import { getApiUrl } from '../utils/apiUrl';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -75,7 +76,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }: Au
 
   if (!isOpen) return null;
 
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+  const API_URL = getApiUrl();
 
   // Manejo de Login y Registro
   const handleSubmit = async (e: React.FormEvent) => {
